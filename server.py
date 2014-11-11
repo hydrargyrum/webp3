@@ -18,7 +18,7 @@ ROOTS = {}
 MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
 OGGENCODE = False
-SYSPATH = 'sys'
+SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
 
 
 class NotFound(Exception):
@@ -96,7 +96,7 @@ class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 
 
 class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-	template_name = 'base'
+	template_name = os.path.join(SYSPATH, 'base.tpl')
 
 	def matches_etag(self, etag):
 		if not MATCH_ETAG:
@@ -221,7 +221,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		files = os.listdir(path)
 		natural_sort_ci(files)
 
-		etag = gen_etag('sys/%s.tpl' % self.template_name, path, files, is_file=True, weak=True)
+		etag = gen_etag(self.template_name, path, files, is_file=True, weak=True)
 		if self.matches_etag(etag):
 			return
 
@@ -230,7 +230,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		files = [i['basename'] for i in items if is_audio(i['basename'])]
 
 		relpath, _ = self.extract_url_path()
-		self.template = mako.template.Template(filename='sys/%s.tpl' % self.template_name)
+		self.template = mako.template.Template(filename=self.template_name)
 		body = self.template.render(items=items, files=files, relpath=relpath, parent=parent).encode('utf-8')
 
 		self.send_response(200)
@@ -248,7 +248,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if self.matches_etag(etag):
 			return
 
-		self.template = mako.template.Template(filename='sys/%s.tpl' % self.template_name)
+		self.template = mako.template.Template(filename=self.template_name)
 		body = self.template.render(items=items, files=[], relpath='/', parent='/').encode('utf-8')
 
 		self.send_response(200)
