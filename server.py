@@ -56,6 +56,12 @@ def is_audio(name):
 def decode_u8(s):
 	return s.decode('utf-8')
 
+def mime(path):
+	for ext in AUDIO_EXTENSIONS:
+		if path.endswith(ext):
+			return AUDIO_EXTENSIONS[ext]
+	return ''
+
 def parent(s):
 	'''
 	>>> parent('/foo/bar')
@@ -67,6 +73,22 @@ def parent(s):
 	if s.endswith('/'):
 		s = s[:-1]
 	return os.path.dirname(s)
+
+def norm(path):
+	'''
+	>>> norm('/foo/../bar//')
+	'bar'
+	>>> norm('foo/bar/')
+	'foo/bar'
+	# norm('foo/../..') will raise Forbidden
+	'''
+
+	path = os.path.normpath(path)
+	if path.startswith('/'):
+		path = path[1:]
+	if path.startswith('../'):
+		raise Forbidden()
+	return path
 
 
 class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
@@ -93,58 +115,57 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		path = urllib.unquote(path).decode('utf-8')
 		return path, params
 
-	def resolve_path(self, p):
-		p = os.path.normpath(p)
-		if '..' in p: # TODO improve
-			raise Forbidden()
-		if p.startswith('/'):
-			p = p[1:]
-
-		ps = p.split('/', 1)
-		if len(ps) == 1 and not ps[0]: # /
+	def resolve_user_path(self, path):
+		if not path: # url = /
 			return None
-		try: # /foo
-			ret = ROOTS[ps[0]]
+		try:
+			rootname, subpath = path.split('/', 1)
+		except ValueError: # url = /foo
+			rootname, subpath = path, ''
+		try:
+			ret = ROOTS[rootname]
 		except KeyError:
 			raise NotFound()
-		if len(ps) == 2: # /foo/bar
-			ret = os.path.join(ret, ps[1])
+		if subpath: # url = /foo/bar...
+			ret = os.path.join(ret, subpath)
 
 		if not os.path.exists(ret):
 			raise NotFound()
 		return ret
 
 	def do_GET(self):
-		path, params = self.extract_url_path()
+		urlpath, params = self.extract_url_path()
+		try:
+			path = norm(urlpath)
+		except Forbidden:
+			return self.do_forbidden()
 
-		if path.startswith('/_/'):
-			return self.sysget(path)
+		if path.startswith('_/'):
+			return self.send_sysfile(path)
 
 		try:
-			realpath = self.resolve_path(path)
+			userpath = self.resolve_user_path(path)
 		except NotFound:
 			return self.do_notfound()
 		except Forbidden:
 			return self.do_forbidden()
 
-		if realpath is None:
-			return self.listroot(params)
-		elif os.path.isdir(realpath):
-			if not path.endswith('/'):
-				return self.redirect_slash()
-			return self.listdir(realpath, params)
-		elif os.path.isfile(realpath):
-			return self.handle_file(realpath, params)
+		if userpath is None:
+			return self.list_root(params)
+		elif os.path.isdir(userpath):
+			if not urlpath.endswith('/'):
+				return self.redirect_slash(urlpath)
+			return self.list_dir(userpath, params)
+		elif os.path.isfile(userpath):
+			return self.handle_file(userpath, params)
 		else:
 			return self.handle_notfound()
 
-	def redirect_slash(self):
-		p = self.path
-		if '?' not in p:
-			p = p + '/'
+	def redirect_slash(self, urlpath):
+		urlpath = urlpath + '/'
 
 		self.send_response(302)
-		self.send_header('Location', p)
+		self.send_header('Location', urlpath)
 		self.send_header('Content-Length', 0)
 		self.end_headers()
 
@@ -154,18 +175,9 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_forbidden(self):
 		self.send_error(403)
 
-	def mime(self, path):
-		if path.endswith('.mp3'):
-			return 'audio/mp3'
-		elif path.endswith('.ogg'):
-			return 'audio/ogg'
-		else:
-			return ''
-
-	def sysget(self, path):
-		path = os.path.normpath(path).replace('/_/', '')
-		if '..' in path:
-			return self.do_forbidden()
+	def send_sysfile(self, path):
+		if path.startswith('_/'):
+			path = path[2:]
 
 		path = os.path.join(SYSPATH, path)
 		if not os.path.isfile(path):
@@ -199,13 +211,13 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def send_file(self, path, etag):
 		with file(path, 'rb') as f:
 			self.send_response(200)
-			self.send_header('Content-Type', self.mime(path))
+			self.send_header('Content-Type', mime(path))
 			self.send_header('Content-Length', os.path.getsize(path))
 			self.send_header('ETag', etag)
 			self.end_headers()
 			shutil.copyfileobj(f, self.wfile)
 
-	def listdir(self, path, params=None):
+	def list_dir(self, path, params=None):
 		files = os.listdir(path)
 		natural_sort_ci(files)
 
@@ -228,7 +240,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.end_headers()
 		self.wfile.write(body)
 
-	def listroot(self, params=None):
+	def list_root(self, params=None):
 		items = [dict(size=0, basename=k, is_dir=True, is_audio=False) for k in ROOTS.keys()]
 		items.sort(key=lambda x: x['basename'])
 

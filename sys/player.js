@@ -96,9 +96,7 @@ function modFilesPlay() {
 }
 
 function getPath() {
-	var p = unescape(document.location.href);
-	p = p.substring(p.indexOf('://') + 3);
-	p = p.substring(p.indexOf('/'));
+	var p = unescape(document.location.pathname);
 	return p;
 }
 
@@ -189,7 +187,7 @@ function blinkStart($s) {
 		$s.css("visibility", "hidden");
 		$s.blinker = window.setTimeout(on, 500);
 	};
-	
+
 	on();
 }
 
