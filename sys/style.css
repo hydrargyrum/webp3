@@ -1,0 +1,60 @@
+#listing {
+	padding-left: 1ex;
+	border: 1px dashed;
+	list-style-position: inside;
+}
+
+* {
+	font-size: small;
+}
+
+body {
+	font-family: monospace;
+	float: left;
+}
+
+a {
+	color: black;
+}
+
+#listing a:visited {
+	color: #666;
+}
+
+.parent {
+	font-style: italic;
+}
+
+.dir + .file, .parent + .file {
+	padding-top: 1em;
+}
+
+#toolPP, #toolPrev, #toolNext, #song, #seekbar, #time {
+	display: inline-block;
+	border: 1px solid black;
+	padding: .5em;
+
+	text-decoration: none;
+	text-align: center;
+	color: black;
+}
+
+#toolPP, #toolPrev, #toolNext {
+	min-width: 1.5em;
+	font-weight: bold;
+}
+
+#song {
+	display: inline-block;
+	width: 300px;
+}
+
+#oldToolbar {
+	display: none;
+}
+
+#albumCover {
+	display: block;
+	max-width: 64px;
+	max-height: 64px;
+}
