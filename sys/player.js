@@ -1,3 +1,5 @@
+/** You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see /_/COPYING.WTFPL] */
+
 var playlist = [];
 var playlist_index = 0;
 
@@ -37,7 +39,6 @@ function pl_prev() {
 }
 
 function pl_enqueueDir() {
-//	playlist = files;
 	playlist = [];
 	$(".file.audio a").each(function() {
 		playlist.push(this.href);
@@ -102,7 +103,7 @@ function getPath() {
 
 function updateTitle() {
 	var title = getPath();
-	document.title = title + " - Player";
+	document.title = title + " - WebP3";
 	updateCrumbs();
 }
 

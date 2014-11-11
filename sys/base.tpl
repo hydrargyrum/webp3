@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <head>
 	<meta charset="utf-8" />
@@ -5,7 +6,7 @@
 	<script src="/_/player.js"></script>
 	<link href="/_/style.css" rel="stylesheet" />
 	<link rel="icon" type="image/png" href="/_/favicon.png" />
-	<title>${relpath} - Player</title>
+	<title>${relpath} - WebP3</title>
 </head>
 <body>
 <div id="oldToolbar"><audio id="player" preload="true" controls="controls"></audio></div>

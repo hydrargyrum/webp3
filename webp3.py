@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# license: do What The Fuck you want Public License version 2
+# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
 
 import BaseHTTPServer
 import SocketServer
