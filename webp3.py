@@ -5,12 +5,12 @@ import BaseHTTPServer
 import SocketServer
 import os
 import re
-import shutil
 import hashlib
 import urllib
 import urlparse
 import subprocess
 import argparse
+import select
 import mako.template
 
 PORT = 8000
@@ -19,7 +19,7 @@ MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
 OGGENCODE = False
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
-
+QUIT = False
 
 class NotFound(Exception):
 	pass
@@ -89,6 +89,22 @@ def norm(path):
 	if path.startswith('../'):
 		raise Forbidden()
 	return path
+
+def write_file(filename, outfd):
+	with file(filename, 'rb') as f:
+		while True:
+			buf = f.read(select.PIPE_BUF)
+			if not buf:
+				break
+			while True:
+				_, o, _ = select.select([], [outfd], [], .5)
+				if QUIT:
+					outfd.close()
+					return
+				elif o:
+					outfd.write(buf)
+					break
+				
 
 
 class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
@@ -191,7 +207,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.send_header('Content-Length', os.path.getsize(path))
 		self.send_header('ETag', etag)
 		self.end_headers()
-		shutil.copyfileobj(open(path), self.wfile)
+		write_file(path, self.wfile)
 
 	def handle_file(self, path, params=None):
 		etag = gen_etag(path, params, is_file=True, weak=bool(params))
@@ -209,13 +225,12 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			subprocess.call(['sox', path, '-t', 'ogg', '-'], stdout=self.wfile)
 
 	def send_file(self, path, etag):
-		with file(path, 'rb') as f:
-			self.send_response(200)
-			self.send_header('Content-Type', mime(path))
-			self.send_header('Content-Length', os.path.getsize(path))
-			self.send_header('ETag', etag)
-			self.end_headers()
-			shutil.copyfileobj(f, self.wfile)
+		self.send_response(200)
+		self.send_header('Content-Type', mime(path))
+		self.send_header('Content-Length', os.path.getsize(path))
+		self.send_header('ETag', etag)
+		self.end_headers()
+		write_file(path, self.wfile)
 
 	def list_dir(self, path, params=None):
 		files = os.listdir(path)
@@ -256,7 +271,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.send_header('Content-Type', 'text/html')
 		self.send_header('ETag', etag)
 		self.end_headers()
-		self.wfile.write(body)		
+		self.wfile.write(body)
 
 	def make_item_data(self, path):
 		basename = os.path.basename(path)
@@ -270,7 +285,7 @@ def run(server_class=BaseHTTPServer.HTTPServer, handler_class=BaseHTTPServer.Bas
 
 
 def main():
-	global PORT, OGGENCODE, ROOTS
+	global PORT, OGGENCODE, ROOTS, QUIT
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
@@ -287,7 +302,10 @@ def main():
 			parser.error('folders must be with format NAME=PATH')
 		ROOTS[decode_u8(fdata[0])] = decode_u8(fdata[1])
 
-	run(server_class=ThreadedServer, handler_class=AudioRequestHandler)
+	try:
+		run(server_class=ThreadedServer, handler_class=AudioRequestHandler)
+	except KeyboardInterrupt:
+		QUIT = True
 
 if __name__ == '__main__':
 	main()
