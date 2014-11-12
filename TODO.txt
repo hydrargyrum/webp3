@@ -1,0 +1,3 @@
+* support TLS
+* support HTTP basic auth
+* support WSGI/running in another web server
