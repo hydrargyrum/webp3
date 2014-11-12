@@ -175,7 +175,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		elif os.path.isfile(userpath):
 			return self.handle_file(userpath, params)
 		else:
-			return self.handle_notfound()
+			return self.do_notfound()
 
 	def redirect_slash(self, urlpath):
 		urlpath = urlpath + '/'
