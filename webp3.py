@@ -99,12 +99,18 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	template_name = os.path.join(SYSPATH, 'base.tpl')
 
 	def _write_body(self, s):
+		if self.command == 'HEAD':
+			return
+
 		if not self.range:
 			self.wfile.write(s)
 		else:
 			self.wfile.write(s[self.range[0]:self.range[1]])
 
 	def _write_file(self, filename, outfd):
+		if self.command == 'HEAD':
+			return
+
 		with file(filename, 'rb') as f:
 			if self.range:
 				f.seek(self.range[0])
@@ -223,6 +229,8 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			return self.do_file(userpath, params)
 		else:
 			return self.do_notfound()
+
+	do_HEAD = do_GET
 
 	def redirect_slash(self, urlpath):
 		urlpath = urlpath + '/'
