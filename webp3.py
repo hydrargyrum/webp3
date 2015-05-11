@@ -90,22 +90,6 @@ def norm(path):
 		raise Forbidden()
 	return path
 
-def write_file(filename, outfd):
-	with file(filename, 'rb') as f:
-		while True:
-			buf = f.read(select.PIPE_BUF)
-			if not buf:
-				break
-			while True:
-				_, o, _ = select.select([], [outfd], [], .5)
-				if QUIT:
-					outfd.close()
-					return
-				elif o:
-					outfd.write(buf)
-					break
-				
-
 
 class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 	pass
@@ -114,7 +98,35 @@ class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
 class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	template_name = os.path.join(SYSPATH, 'base.tpl')
 
+	def _write_body(self, s):
+		if not self.range:
+			self.wfile.write(s)
+		else:
+			self.wfile.write(s[self.range[0]:self.range[1]])
+
+	def _write_file(self, filename, outfd):
+		with file(filename, 'rb') as f:
+			if self.range:
+				f.seek(self.range[0])
+			while True:
+				if self.range:
+					buflen = min(select.PIPE_BUF, self.range[1] - f.tell())
+				else:
+					buflen = select.PIPE_BUF
+				buf = f.read(buflen)
+				if not buf:
+					break
+				while True:
+					_, o, _ = select.select([], [outfd], [], .5)
+					if QUIT:
+						outfd.close()
+						return
+					elif o:
+						outfd.write(buf)
+						break
+
 	def matches_etag(self, etag):
+		# returns True if caller should stop processing the request
 		if not MATCH_ETAG:
 			return False
 
@@ -123,6 +135,41 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.send_header('ETag', etag)
 			self.end_headers()
 			return True
+		return False
+
+	def handle_partial(self, size):
+		# returns True if caller should stop processing the request
+		self.range = None
+		header = self.headers.get('Range')
+		if not header:
+			self.send_response(200)
+			self.send_header('Content-Length', size)
+			return False
+
+		if not header.startswith('bytes='):
+			self.send_error(400)
+
+		ranges = header[6:].split(',')
+		if len(ranges) != 1:
+			self.send_error(400)
+			return True
+
+		r = ranges[0].split('-')
+		if len(r) != 2:
+			self.send_error(400)
+			return True
+		start = int(r[0])
+		end = size - 1
+		if r[1]:
+			end = min(size - 1, int(r[1]))
+		if start >= size:
+			self.send_error(416)
+			return True
+
+		self.send_response(206)
+		self.send_header('Content-Range', '%s-%s/%s' % (start, end, size))
+		self.send_header('Content-Length', end - start + 1)
+		self.range = (start, end + 1)
 		return False
 
 	def extract_url_path(self):
@@ -157,7 +204,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			return self.do_forbidden()
 
 		if path.startswith('_/'):
-			return self.send_sysfile(path)
+			return self.do_sysfile(path)
 
 		try:
 			userpath = self.resolve_user_path(path)
@@ -167,13 +214,13 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			return self.do_forbidden()
 
 		if userpath is None:
-			return self.list_root(params)
+			return self.do_list_root(params)
 		elif os.path.isdir(userpath):
 			if not urlpath.endswith('/'):
 				return self.redirect_slash(urlpath)
-			return self.list_dir(userpath, params)
+			return self.do_list_dir(userpath, params)
 		elif os.path.isfile(userpath):
-			return self.handle_file(userpath, params)
+			return self.do_file(userpath, params)
 		else:
 			return self.do_notfound()
 
@@ -191,7 +238,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_forbidden(self):
 		self.send_error(403)
 
-	def send_sysfile(self, path):
+	def do_sysfile(self, path):
 		if path.startswith('_/'):
 			path = path[2:]
 
@@ -203,19 +250,20 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if self.matches_etag(etag):
 			return
 
-		self.send_response(200)
-		self.send_header('Content-Length', os.path.getsize(path))
+		if self.handle_partial(os.path.getsize(path)):
+			return
+
 		self.send_header('ETag', etag)
 		self.end_headers()
-		write_file(path, self.wfile)
+		self._write_file(path, self.wfile)
 
-	def handle_file(self, path, params=None):
+	def do_file(self, path, params=None):
 		etag = gen_etag(path, params, is_file=True, weak=bool(params))
 		if self.matches_etag(etag):
 			return
 
 		if not params or not params.get('convert') or not OGGENCODE:
-			return self.send_file(path, etag)
+			return self.do_send_file(path, etag)
 
 		if params.get('convert') == ['ogg']:
 			self.send_response(200)
@@ -224,15 +272,16 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.end_headers()
 			subprocess.call(['sox', path, '-t', 'ogg', '-'], stdout=self.wfile)
 
-	def send_file(self, path, etag):
-		self.send_response(200)
+	def do_send_file(self, path, etag):
+		if self.handle_partial(os.path.getsize(path)):
+			return
+
 		self.send_header('Content-Type', mime(path))
-		self.send_header('Content-Length', os.path.getsize(path))
 		self.send_header('ETag', etag)
 		self.end_headers()
-		write_file(path, self.wfile)
+		self._write_file(path, self.wfile)
 
-	def list_dir(self, path, params=None):
+	def do_list_dir(self, path, params=None):
 		files = os.listdir(path)
 		natural_sort_ci(files)
 
@@ -248,14 +297,14 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.template = mako.template.Template(filename=self.template_name)
 		body = self.template.render(items=items, files=files, relpath=relpath, parent=parent).encode('utf-8')
 
-		self.send_response(200)
-		self.send_header('Content-Length', len(body))
+		if self.handle_partial(len(body)):
+			return
 		self.send_header('Content-Type', 'text/html')
 		self.send_header('ETag', etag)
 		self.end_headers()
-		self.wfile.write(body)
+		self._write_body(body)
 
-	def list_root(self, params=None):
+	def do_list_root(self, params=None):
 		items = [dict(size=0, basename=k, is_dir=True, is_audio=False) for k in ROOTS.keys()]
 		items.sort(key=lambda x: x['basename'])
 
@@ -266,12 +315,12 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.template = mako.template.Template(filename=self.template_name)
 		body = self.template.render(items=items, files=[], relpath='/', parent='/').encode('utf-8')
 
-		self.send_response(200)
-		self.send_header('Content-Length', len(body))
+		if self.handle_partial(len(body)):
+			return
 		self.send_header('Content-Type', 'text/html')
 		self.send_header('ETag', etag)
 		self.end_headers()
-		self.wfile.write(body)
+		self._write_body(body)
 
 	def make_item_data(self, path):
 		basename = os.path.basename(path)
@@ -309,4 +358,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-
