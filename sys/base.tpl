@@ -20,9 +20,9 @@
 	<li class="parent"><a href="..">Parent</a></li>
 	% for item in items:
 		% if item['is_dir']:
-			<li class="dir"><a href="${item['basename']}/">${item['basename']}</a>/</li>
+			<li class="dir"><a href="${item['basename'] | u}/">${item['basename']}</a>/</li>
 		% else:
-			<li class="file ${item['is_audio'] and 'audio' or ''}"><a href="${item['basename']}">${item['basename']}</a></li>
+			<li class="file ${item['is_audio'] and 'audio' or ''}"><a href="${item['basename'] | u}">${item['basename']}</a></li>
 		% endif
 	% endfor
 </ul>

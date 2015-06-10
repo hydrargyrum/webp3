@@ -61,7 +61,7 @@ function pl_play() {
 }
 
 function load(url) {
-	var name = unescape(url);
+	var name = decodeURIComponent(url.replace(/\+/g, '%20'));
 	name = name.substring(name.lastIndexOf('/') + 1);
 	name = name.substring(0, name.lastIndexOf('.'));
 

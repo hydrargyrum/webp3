@@ -181,7 +181,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def extract_url_path(self):
 		_, _, path, _, query, _ = urlparse.urlparse(self.path)
 		params = urlparse.parse_qs(query)
-		path = urllib.unquote(path).decode('utf-8')
+		path = urllib.unquote_plus(path).decode('utf-8')
 		return path, params
 
 	def resolve_user_path(self, path):
