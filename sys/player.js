@@ -224,8 +224,16 @@ $(document).ready(function() {
 	$("#toolPP").text(">");
 
 	$(window).on("keypress", function(e) {
-		if (e.charCode == 112) {
+		switch (e.key) {
+		case "p":
 			playPause();
+			break;
+		case "<":
+			pl_prev();
+			break;
+		case ">":
+			pl_next();
+			break;
 		}
 	});
 });
