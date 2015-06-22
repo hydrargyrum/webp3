@@ -15,6 +15,10 @@ function duration2str(t) {
 	return pad(parseInt(t / 60), 2) + ":" + pad(parseInt(t % 60), 2);
 }
 
+function unquote(url) {
+	return decodeURIComponent(url.replace(/\+/g, '%20'));
+}
+
 function isPlaying() {
 	return !$("#player").get(0).paused;
 }
@@ -61,7 +65,7 @@ function pl_play() {
 }
 
 function load(url) {
-	var name = decodeURIComponent(url.replace(/\+/g, '%20'));
+	var name = unquote(url);
 	name = name.substring(name.lastIndexOf('/') + 1);
 	name = name.substring(0, name.lastIndexOf('.'));
 
@@ -97,7 +101,7 @@ function modFilesPlay() {
 }
 
 function getPath() {
-	var p = unescape(document.location.pathname);
+	var p = unquote(document.location.pathname);
 	return p;
 }
 
