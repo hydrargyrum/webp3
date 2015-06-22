@@ -357,7 +357,10 @@ def main():
 		fdata = fstr.split('=', 1)
 		if len(fdata) != 2 or not all(fdata):
 			parser.error('folders must be with format NAME=PATH')
-		ROOTS[decode_u8(fdata[0])] = decode_u8(fdata[1])
+		key = decode_u8(fdata[0])
+		if key in ROOTS:
+			parser.error('roots can only be specified once: %s' % key)
+		ROOTS[key] = decode_u8(fdata[1])
 
 	try:
 		run(server_class=ThreadedServer, handler_class=AudioRequestHandler)
