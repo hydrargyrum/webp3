@@ -10,6 +10,8 @@ import urllib
 import urlparse
 import subprocess
 import argparse
+import zipfile
+import tempfile
 import select
 import mako.template
 
@@ -18,6 +20,7 @@ ROOTS = {}
 MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
 OGGENCODE = False
+ZIPPING = False
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
 QUIT = False
 
@@ -107,29 +110,36 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		else:
 			self.wfile.write(s[self.range[0]:self.range[1]])
 
+	def _write_fd(self, f, outfd):
+		if self.command == 'HEAD':
+			return
+
+		if self.range:
+			f.seek(self.range[0])
+
+		while True:
+			if self.range:
+				buflen = min(select.PIPE_BUF, self.range[1] - f.tell())
+			else:
+				buflen = select.PIPE_BUF
+			buf = f.read(buflen)
+			if not buf:
+				break
+			while True:
+				_, o, _ = select.select([], [outfd], [], .5)
+				if QUIT:
+					outfd.close()
+					return
+				elif o:
+					outfd.write(buf)
+					break
+
 	def _write_file(self, filename, outfd):
 		if self.command == 'HEAD':
 			return
 
 		with file(filename, 'rb') as f:
-			if self.range:
-				f.seek(self.range[0])
-			while True:
-				if self.range:
-					buflen = min(select.PIPE_BUF, self.range[1] - f.tell())
-				else:
-					buflen = select.PIPE_BUF
-				buf = f.read(buflen)
-				if not buf:
-					break
-				while True:
-					_, o, _ = select.select([], [outfd], [], .5)
-					if QUIT:
-						outfd.close()
-						return
-					elif o:
-						outfd.write(buf)
-						break
+			self._write_fd(f, outfd)
 
 	def matches_etag(self, etag):
 		# returns True if caller should stop processing the request
@@ -224,7 +234,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		elif os.path.isdir(userpath):
 			if not urlpath.endswith('/'):
 				return self.redirect_slash(urlpath)
-			return self.do_list_dir(userpath, params)
+			return self.do_dir(userpath, params)
 		elif os.path.isfile(userpath):
 			return self.do_file(userpath, params)
 		else:
@@ -289,13 +299,35 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self.end_headers()
 		self._write_file(path, self.wfile)
 
-	def do_list_dir(self, path, params=None):
+	def do_zip(self, path):
+		with tempfile.TemporaryFile() as fd:
+			with zipfile.ZipFile(fd, 'w') as zip:
+				files = os.listdir(path)
+				natural_sort_ci(files)
+				for entry in files:
+					absentry = os.path.join(path, entry)
+					if os.path.isfile(absentry):
+						zip.write(absentry, entry)
+			size = fd.tell()
+			fd.seek(0)
+
+			if self.handle_partial(size):
+				return
+			self.send_header('Content-Disposition', 'attachment; filename="%s.zip"' % os.path.basename(path).encode('utf-8'))
+			self.send_header('Content-Type', 'application/zip')
+			self.end_headers()
+			self._write_fd(fd, self.wfile)
+
+	def do_dir(self, path, params=None):
 		files = os.listdir(path)
 		natural_sort_ci(files)
 
-		etag = gen_etag(self.template_name, path, files, is_file=True, weak=True)
+		etag = gen_etag(self.template_name, params, path, files, is_file=True, weak=True)
 		if self.matches_etag(etag):
 			return
+
+		if params and params.get('zip') and ZIPPING:
+			return self.do_zip(path)
 
 		items = [self.make_item_data(os.path.join(path, f)) for f in files]
 		items.sort(key=lambda i: not i['is_dir']) # dirs first
@@ -342,15 +374,17 @@ def run(server_class=BaseHTTPServer.HTTPServer, handler_class=BaseHTTPServer.Bas
 
 
 def main():
-	global PORT, OGGENCODE, ROOTS, QUIT
+	global PORT, OGGENCODE, ZIPPING, ROOTS, QUIT
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
 	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
-	parser.add_argument('--encode', action='store_true', help='reencode non-ogg to ogg (cpu intensive on server)')
+	parser.add_argument('--encode', action='store_true', help='support reencoding non-ogg to ogg (cpu intensive on server)')
+	parser.add_argument('--zip', action='store_true', help='support zipping directories (space consuming on server)')
 	args = parser.parse_args()
 
 	OGGENCODE = args.encode
+	ZIPPING = args.zip
 	PORT = args.port
 	ROOTS = {}
 	for fstr in args.folders:
