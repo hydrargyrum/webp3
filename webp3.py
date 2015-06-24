@@ -12,6 +12,7 @@ import subprocess
 import argparse
 import zipfile
 import tempfile
+import threading
 import select
 import mako.template
 
@@ -21,6 +22,7 @@ MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
 CAN_OGGENCODE = False
 CAN_ZIP = False
+CURRENT_ZIPPING = threading.Semaphore(2) # limit DoS
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
 QUIT = False
 
@@ -300,6 +302,15 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		self._write_file(path, self.wfile)
 
 	def do_zip(self, path):
+		if not CURRENT_ZIPPING.acquire(False):
+			self.send_error(429, 'Too many operations in progress')
+			return
+		try:
+			return self._do_zip(path)
+		finally:
+			CURRENT_ZIPPING.release()
+
+	def _do_zip(self, path):
 		with tempfile.TemporaryFile() as fd:
 			with zipfile.ZipFile(fd, 'w') as zip:
 				files = os.listdir(path)
