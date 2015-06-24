@@ -19,8 +19,8 @@ PORT = 8000
 ROOTS = {}
 MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
-OGGENCODE = False
-ZIPPING = False
+CAN_OGGENCODE = False
+CAN_ZIP = False
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
 QUIT = False
 
@@ -280,7 +280,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if self.matches_etag(etag):
 			return
 
-		if not params or not params.get('convert') or not OGGENCODE:
+		if not params or not params.get('convert') or not CAN_OGGENCODE:
 			return self.do_send_file(path, etag)
 
 		if params.get('convert') == ['ogg']:
@@ -326,7 +326,7 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if self.matches_etag(etag):
 			return
 
-		if params and params.get('zip') and ZIPPING:
+		if params and params.get('zip') and CAN_ZIP:
 			return self.do_zip(path)
 
 		items = [self.make_item_data(os.path.join(path, f)) for f in files]
@@ -374,7 +374,7 @@ def run(server_class=BaseHTTPServer.HTTPServer, handler_class=BaseHTTPServer.Bas
 
 
 def main():
-	global PORT, OGGENCODE, ZIPPING, ROOTS, QUIT
+	global PORT, CAN_OGGENCODE, CAN_ZIP, ROOTS, QUIT
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
@@ -383,8 +383,8 @@ def main():
 	parser.add_argument('--zip', action='store_true', help='support zipping directories (space consuming on server)')
 	args = parser.parse_args()
 
-	OGGENCODE = args.encode
-	ZIPPING = args.zip
+	CAN_OGGENCODE = args.encode
+	CAN_ZIP = args.zip
 	PORT = args.port
 	ROOTS = {}
 	for fstr in args.folders:
