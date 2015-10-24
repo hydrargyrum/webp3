@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
 
+import argparse
 import BaseHTTPServer
-import SocketServer
 import os
 import re
 import hashlib
-import urllib
-import urlparse
 import logging
 import logging.config
+import select
+import SocketServer
 import subprocess
-import argparse
-import zipfile
+import sys
 import tempfile
 import threading
-import select
+import urllib
+import urlparse
+import zipfile
+
 import mako.template
 
 PORT = 8000
