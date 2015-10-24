@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
 
-import argparse
 import os
 import re
 import hashlib
@@ -17,7 +16,6 @@ import zipfile
 from bottle import *
 
 
-PORT = 8000
 ROOTS = {}
 MATCH_ETAG = True
 AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.wav': 'audio/x-wav', '.m4a': 'audio/mpeg'}
@@ -44,6 +42,7 @@ def natural_sort_ci(l):
 
 	l.sort(key=natural_sort_ci_key)
 
+
 def gen_etag(*data, **kw):
 	if kw.get('is_file', False):
 		data = (data, os.stat(data[0]))
@@ -53,17 +52,17 @@ def gen_etag(*data, **kw):
 	else:
 		return '"%s"' % t
 
+
 def is_audio(name):
 	return any(name.endswith(ext) for ext in AUDIO_EXTENSIONS)
 
-def decode_u8(s):
-	return s.decode('utf-8')
 
 def get_mime(path):
 	for ext in AUDIO_EXTENSIONS:
 		if path.endswith(ext):
 			return AUDIO_EXTENSIONS[ext]
 	return mimetypes.guess_type(path)[0]
+
 
 def parent(s):
 	'''
@@ -141,32 +140,6 @@ class AudioRequestHandler:
 	def make_item_data(self, path):
 		basename = os.path.basename(path)
 		return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
-
-
-def main():
-	global PORT, CAN_OGGENCODE, CAN_ZIP, ROOTS
-
-	parser = argparse.ArgumentParser()
-	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
-	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
-	parser.add_argument('--encode', action='store_true', help='support reencoding non-ogg to ogg (cpu intensive on server)')
-	parser.add_argument('--zip', action='store_true', help='support zipping directories (space consuming on server)')
-	args = parser.parse_args()
-
-	CAN_OGGENCODE = args.encode
-	CAN_ZIP = args.zip
-	PORT = args.port
-	ROOTS = {}
-	for fstr in args.folders:
-		fdata = fstr.split('=', 1)
-		if len(fdata) != 2 or not all(fdata):
-			parser.error('folders must be with format NAME=PATH')
-		key = decode_u8(fdata[0])
-		if key in ROOTS:
-			parser.error('roots can only be specified once: %s' % key)
-		ROOTS[key] = decode_u8(fdata[1])
-
-	run(host='localhost', port=8080, debug=True)
 
 
 def _do_etag(etag):
@@ -340,7 +313,3 @@ def get_any(tree, path):
 		return ls_dir(dest, '/%s/%s' % (tree, path))
 	else:
 		abort(403)
-
-
-if __name__ == '__main__':
-	main()

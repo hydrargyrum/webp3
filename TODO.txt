@@ -1,3 +1,3 @@
-* support TLS
-* support HTTP basic auth
-* support WSGI/running in another web server
+* support HEAD
+* responsive CSS
+* reimplement zipping and encoding
