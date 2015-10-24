@@ -2,14 +2,10 @@
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
 
 import argparse
-import BaseHTTPServer
 import os
 import re
 import hashlib
-import logging
-import logging.config
-import select
-import SocketServer
+import mimetypes
 import subprocess
 import sys
 import tempfile
@@ -18,7 +14,8 @@ import urllib
 import urlparse
 import zipfile
 
-import mako.template
+from bottle import *
+
 
 PORT = 8000
 ROOTS = {}
@@ -28,11 +25,7 @@ CAN_OGGENCODE = False
 CAN_ZIP = False
 CURRENT_ZIPPING = threading.Semaphore(2) # limit DoS
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
-QUIT = False
-REQUEST_LOGGER = logging.getLogger('requests')
-
-class NotFound(Exception):
-	pass
+TEMPLATE = os.path.join(SYSPATH, 'base.tpl')
 
 
 class Forbidden(Exception):
@@ -66,11 +59,11 @@ def is_audio(name):
 def decode_u8(s):
 	return s.decode('utf-8')
 
-def mime(path):
+def get_mime(path):
 	for ext in AUDIO_EXTENSIONS:
 		if path.endswith(ext):
 			return AUDIO_EXTENSIONS[ext]
-	return ''
+	return mimetypes.guess_type(path)[0]
 
 def parent(s):
 	'''
@@ -101,187 +94,7 @@ def norm(path):
 	return path
 
 
-class ThreadedServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
-	pass
-
-
-class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-	template_name = os.path.join(SYSPATH, 'base.tpl')
-
-	def _write_body(self, s):
-		if self.command == 'HEAD':
-			return
-
-		if not self.range:
-			self.wfile.write(s)
-		else:
-			self.wfile.write(s[self.range[0]:self.range[1]])
-
-	def _write_fd(self, f, outfd):
-		if self.command == 'HEAD':
-			return
-
-		if self.range:
-			f.seek(self.range[0])
-
-		while True:
-			if self.range:
-				buflen = min(select.PIPE_BUF, self.range[1] - f.tell())
-			else:
-				buflen = select.PIPE_BUF
-			buf = f.read(buflen)
-			if not buf:
-				break
-			while True:
-				_, o, _ = select.select([], [outfd], [], .5)
-				if QUIT:
-					outfd.close()
-					return
-				elif o:
-					outfd.write(buf)
-					break
-
-	def _write_file(self, filename, outfd):
-		if self.command == 'HEAD':
-			return
-
-		with file(filename, 'rb') as f:
-			self._write_fd(f, outfd)
-
-	def matches_etag(self, etag):
-		# returns True if caller should stop processing the request
-		if not MATCH_ETAG:
-			return False
-
-		if etag in self.headers.get('If-None-Match', ''):
-			self.send_response(304)
-			self.send_header('ETag', etag)
-			self.end_headers()
-			return True
-		return False
-
-	def handle_partial(self, size):
-		# returns True if caller should stop processing the request
-		self.range = None
-		header = self.headers.get('Range')
-		if not header:
-			self.send_response(200)
-			self.send_header('Content-Length', size)
-			return False
-
-		if not header.startswith('bytes='):
-			self.send_error(400)
-
-		ranges = header[6:].split(',')
-		if len(ranges) != 1:
-			self.send_error(400)
-			return True
-
-		r = ranges[0].split('-')
-		if len(r) != 2:
-			self.send_error(400)
-			return True
-		start = int(r[0])
-		end = size - 1
-		if r[1]:
-			end = min(size - 1, int(r[1]))
-		if start >= size:
-			self.send_error(416)
-			return True
-
-		self.send_response(206)
-		self.send_header('Content-Range', '%s-%s/%s' % (start, end, size))
-		self.send_header('Content-Length', end - start + 1)
-		self.range = (start, end + 1)
-		return False
-
-	def extract_url_path(self):
-		_, _, path, _, query, _ = urlparse.urlparse(self.path)
-		params = urlparse.parse_qs(query)
-		path = urllib.unquote_plus(path).decode('utf-8')
-		return path, params
-
-	def resolve_user_path(self, path):
-		if not path: # url = /
-			return None
-		try:
-			rootname, subpath = path.split('/', 1)
-		except ValueError: # url = /foo
-			rootname, subpath = path, ''
-		try:
-			ret = ROOTS[rootname]
-		except KeyError:
-			raise NotFound()
-		if subpath: # url = /foo/bar...
-			ret = os.path.join(ret, subpath)
-
-		if not os.path.exists(ret):
-			raise NotFound()
-		return ret
-
-	def do_GET(self):
-		urlpath, params = self.extract_url_path()
-		try:
-			path = norm(urlpath)
-		except Forbidden:
-			return self.do_forbidden()
-
-		if path.startswith('_/'):
-			return self.do_sysfile(path)
-
-		try:
-			userpath = self.resolve_user_path(path)
-		except NotFound:
-			return self.do_notfound()
-		except Forbidden:
-			return self.do_forbidden()
-
-		if userpath is None:
-			return self.do_list_root(params)
-		elif os.path.isdir(userpath):
-			if not urlpath.endswith('/'):
-				return self.redirect_slash(urlpath)
-			return self.do_dir(userpath, params)
-		elif os.path.isfile(userpath):
-			return self.do_file(userpath, params)
-		else:
-			return self.do_notfound()
-
-	do_HEAD = do_GET
-
-	def redirect_slash(self, urlpath):
-		urlpath = urlpath + '/'
-
-		self.send_response(302)
-		self.send_header('Location', urlpath)
-		self.send_header('Content-Length', 0)
-		self.end_headers()
-
-	def do_notfound(self):
-		self.send_error(404)
-
-	def do_forbidden(self):
-		self.send_error(403)
-
-	def do_sysfile(self, path):
-		if path.startswith('_/'):
-			path = path[2:]
-
-		path = os.path.join(SYSPATH, path)
-		if not os.path.isfile(path):
-			return self.do_notfound()
-
-		etag = gen_etag(path, is_file=True, weak=False)
-		if self.matches_etag(etag):
-			return
-
-		if self.handle_partial(os.path.getsize(path)):
-			return
-
-		self.send_header('ETag', etag)
-		self.end_headers()
-		self._write_file(path, self.wfile)
-
+class AudioRequestHandler:
 	def do_file(self, path, params=None):
 		etag = gen_etag(path, params, is_file=True, weak=bool(params))
 		if self.matches_etag(etag):
@@ -296,15 +109,6 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.send_header('ETag', etag)
 			self.end_headers()
 			subprocess.call(['sox', path, '-t', 'ogg', '-'], stdout=self.wfile)
-
-	def do_send_file(self, path, etag):
-		if self.handle_partial(os.path.getsize(path)):
-			return
-
-		self.send_header('Content-Type', mime(path))
-		self.send_header('ETag', etag)
-		self.end_headers()
-		self._write_file(path, self.wfile)
 
 	def do_zip(self, path):
 		if not CURRENT_ZIPPING.acquire(False):
@@ -334,76 +138,19 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.end_headers()
 			self._write_fd(fd, self.wfile)
 
-	def do_dir(self, path, params=None):
-		files = os.listdir(path)
-		natural_sort_ci(files)
-
-		etag = gen_etag(self.template_name, params, path, files, is_file=True, weak=True)
-		if self.matches_etag(etag):
-			return
-
-		if params and params.get('zip') and CAN_ZIP:
-			return self.do_zip(path)
-
-		items = [self.make_item_data(os.path.join(path, f)) for f in files]
-		items.sort(key=lambda i: not i['is_dir']) # dirs first
-		files = [i['basename'] for i in items if is_audio(i['basename'])]
-
-		relpath, _ = self.extract_url_path()
-		self.template = mako.template.Template(filename=self.template_name)
-		body = self.template.render(items=items, files=files, relpath=relpath, parent=parent).encode('utf-8')
-
-		if self.handle_partial(len(body)):
-			return
-		self.send_header('Content-Type', 'text/html')
-		self.send_header('ETag', etag)
-		self.end_headers()
-		self._write_body(body)
-
-	def do_list_root(self, params=None):
-		items = [dict(size=0, basename=k, is_dir=True, is_audio=False) for k in ROOTS.keys()]
-		items.sort(key=lambda x: x['basename'])
-
-		etag = gen_etag(ROOTS, weak=True)
-		if self.matches_etag(etag):
-			return
-
-		self.template = mako.template.Template(filename=self.template_name)
-		body = self.template.render(items=items, files=[], relpath='/', parent='/').encode('utf-8')
-
-		if self.handle_partial(len(body)):
-			return
-		self.send_header('Content-Type', 'text/html')
-		self.send_header('ETag', etag)
-		self.end_headers()
-		self._write_body(body)
-
 	def make_item_data(self, path):
 		basename = os.path.basename(path)
 		return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
 
-	def log_message(self, format, *args):
-		#'%(client_address)s - - [%(time)s] %(message)s'
-		d = {'client_address': self.client_address[0], 'time': self.log_date_time_string()}
-
-		REQUEST_LOGGER.info(format, *args, extra=d)
-
-
-def run(server_class=BaseHTTPServer.HTTPServer, handler_class=BaseHTTPServer.BaseHTTPRequestHandler):
-	server_address = ('', PORT)
-	httpd = server_class(server_address, handler_class)
-	httpd.serve_forever()
-
 
 def main():
-	global PORT, CAN_OGGENCODE, CAN_ZIP, ROOTS, QUIT
+	global PORT, CAN_OGGENCODE, CAN_ZIP, ROOTS
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
 	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
 	parser.add_argument('--encode', action='store_true', help='support reencoding non-ogg to ogg (cpu intensive on server)')
 	parser.add_argument('--zip', action='store_true', help='support zipping directories (space consuming on server)')
-	parser.add_argument('--logging-config', metavar='FILE', help='use ini FILE for logging config')
 	args = parser.parse_args()
 
 	CAN_OGGENCODE = args.encode
@@ -419,18 +166,181 @@ def main():
 			parser.error('roots can only be specified once: %s' % key)
 		ROOTS[key] = decode_u8(fdata[1])
 
-	if args.logging_config:
-		logging.config.fileConfig(args.logging_config)
-	else:
-		errlog = logging.StreamHandler()
-		errlog.setFormatter(logging.Formatter('%(client_address)s - - [%(time)s] %(message)s'))
-		REQUEST_LOGGER.setLevel(logging.INFO)
-		REQUEST_LOGGER.addHandler(errlog)
+	run(host='localhost', port=8080, debug=True)
+
+
+def _do_etag(etag):
+	if not MATCH_ETAG:
+		return
+
+	response.headers['ETag'] = etag
+	if etag in request.headers.get('If-None-Match', ''):
+		abort(304)
+
+
+def _do_partial(size):
+	# returns True if caller should stop processing the request
+	res = None
+	header = request.headers.get('Range')
+	if not header:
+		response.status = 200
+		response.headers['Content-Length'] = size
+		return None
+
+	if not header.startswith('bytes='):
+		self.send_error(400)
+
+	ranges = header[6:].split(',')
+	if len(ranges) != 1:
+		abort(400)
+
+	r = ranges[0].split('-')
+	if len(r) != 2:
+		abort(400)
+	start = int(r[0])
+	end = size - 1
+	if r[1]:
+		end = min(size - 1, int(r[1]))
+	if start >= size:
+		abort(416)
+
+	response.status = 206
+	response.headers['Content-Range'] = '%s-%s/%s' % (start, end, size)
+	response.headers['Content-Length'] = end - start + 1
+	res = (start, end + 1)
+	return res
+
+
+def resolve_path(tree, path):
+	if tree not in ROOTS:
+		abort(404)
 
 	try:
-		run(server_class=ThreadedServer, handler_class=AudioRequestHandler)
-	except KeyboardInterrupt:
-		QUIT = True
+		path = norm(path)
+	except Forbidden:
+		abort(403)
+
+	root = ROOTS[tree]
+	res = os.path.join(root, path)
+
+	if not os.path.exists(res):
+		abort(404)
+
+	return res
+
+
+def make_item_data(path):
+	basename = os.path.basename(path)
+	return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
+
+
+def ls_dir(path, urlpath):
+	files = os.listdir(path)
+	natural_sort_ci(files)
+
+	etag = gen_etag(path, files, is_file=True, weak=True)
+	_do_etag(etag)
+
+	#~ if params and params.get('zip') and CAN_ZIP:
+		#~ return self.do_zip(path)
+
+	items = [make_item_data(os.path.join(path, f)) for f in files]
+	items.sort(key=lambda i: not i['is_dir']) # dirs first
+	files = [i['basename'] for i in items if is_audio(i['basename'])]
+
+	body = mako_template(TEMPLATE, items=items, files=files, relpath=urlpath, parent=parent).encode('utf-8')
+
+	#~ if self.handle_partial(len(body)):
+		#~ return
+	response.headers['Content-Type'] = 'text/html'
+	#~ self.send_header('ETag', etag)
+	return body
+
+
+@route('/')
+def ls_root():
+	items = [dict(size=0, basename=k, is_dir=True, is_audio=False) for k in ROOTS.keys()]
+	items.sort(key=lambda x: x['basename'])
+
+	etag = gen_etag(ROOTS.keys(), weak=True)
+	_do_etag(etag)
+
+	response.headers['Content-Type'] = 'text/html'
+
+	body = mako_template(TEMPLATE, items=items, files=[], relpath='/', parent='/').encode('utf-8')
+
+	range = _do_partial(len(body))
+	if range:
+		return body[range[0]:range[1]]
+	else:
+		return body
+
+@route('/favicon.png')
+def _static():
+	return get_static('favicon.png')
+
+@route('/robots.txt')
+def _static():
+	return get_static('robots.txt')
+
+@route('/_/<name>')
+def get_static(name):
+	return static_file(name, root='sys')
+
+@route('/<tree>')
+def ls_tree(tree):
+	redirect('/%s/' % tree)
+
+@route('/<tree>/')
+def ls_tree(tree):
+	if tree not in ROOTS:
+		abort(404)
+
+	path = ROOTS[tree]
+	return ls_dir(path, '/%s' % tree)
+
+
+def get_file(path):
+	etag = gen_etag(path, is_file=True, weak=False)
+	_do_etag(etag)
+
+	mime = get_mime(path)
+	if mime:
+		response.headers['Content-Type'] = mime
+
+	range = _do_partial(os.path.getsize(path))
+	pos = 0
+
+	with open(path) as fd:
+		if range:
+			fd.seek(range[0])
+			pos, end = range
+
+		while (not range) or (pos < end):
+			data = fd.read(1024)
+			if not data:
+				break
+			if range:
+				data = data[:end - pos]
+			pos += len(data)
+			yield data
+
+
+@route('/<tree>/<path:path>')
+def get_any(tree, path):
+	if not path:
+		return ls_tree(tree)
+
+	dest = resolve_path(tree, path)
+	if os.path.isfile(dest):
+		return get_file(dest)
+	elif os.path.isdir(dest):
+		if not path.endswith('/'):
+			redirect('/%s/%s/' % (tree, path))
+		return ls_dir(dest, '/%s/%s' % (tree, path))
+	else:
+		abort(403)
+
 
 if __name__ == '__main__':
 	main()
