@@ -8,6 +8,8 @@ import re
 import hashlib
 import urllib
 import urlparse
+import logging
+import logging.config
 import subprocess
 import argparse
 import zipfile
@@ -25,6 +27,7 @@ CAN_ZIP = False
 CURRENT_ZIPPING = threading.Semaphore(2) # limit DoS
 SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
 QUIT = False
+REQUEST_LOGGER = logging.getLogger('requests')
 
 class NotFound(Exception):
 	pass
@@ -377,6 +380,12 @@ class AudioRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 		basename = os.path.basename(path)
 		return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
 
+	def log_message(self, format, *args):
+		#'%(client_address)s - - [%(time)s] %(message)s'
+		d = {'client_address': self.client_address[0], 'time': self.log_date_time_string()}
+
+		REQUEST_LOGGER.info(format, *args, extra=d)
+
 
 def run(server_class=BaseHTTPServer.HTTPServer, handler_class=BaseHTTPServer.BaseHTTPRequestHandler):
 	server_address = ('', PORT)
@@ -392,6 +401,7 @@ def main():
 	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
 	parser.add_argument('--encode', action='store_true', help='support reencoding non-ogg to ogg (cpu intensive on server)')
 	parser.add_argument('--zip', action='store_true', help='support zipping directories (space consuming on server)')
+	parser.add_argument('--logging-config', metavar='FILE', help='use ini FILE for logging config')
 	args = parser.parse_args()
 
 	CAN_OGGENCODE = args.encode
@@ -406,6 +416,14 @@ def main():
 		if key in ROOTS:
 			parser.error('roots can only be specified once: %s' % key)
 		ROOTS[key] = decode_u8(fdata[1])
+
+	if args.logging_config:
+		logging.config.fileConfig(args.logging_config)
+	else:
+		errlog = logging.StreamHandler()
+		errlog.setFormatter(logging.Formatter('%(client_address)s - - [%(time)s] %(message)s'))
+		REQUEST_LOGGER.setLevel(logging.INFO)
+		REQUEST_LOGGER.addHandler(errlog)
 
 	try:
 		run(server_class=ThreadedServer, handler_class=AudioRequestHandler)
