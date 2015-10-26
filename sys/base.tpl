@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<%!
+		from  urllib import quote as q
+	%>
 	<meta charset="utf-8" />
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 	<script src="/_/player.js"></script>
@@ -20,9 +23,9 @@
 	<li class="parent"><a href="..">Parent</a></li>
 	% for item in items:
 		% if item['is_dir']:
-			<li class="dir"><a href="${item['basename'] | u}/">${item['basename']}</a>/</li>
+			<li class="dir"><a href="${item['basename'] | q}/">${item['basename']}</a>/</li>
 		% else:
-			<li class="file ${item['is_audio'] and 'audio' or ''}"><a href="${item['basename'] | u}">${item['basename']}</a></li>
+			<li class="file ${item['is_audio'] and 'audio' or ''}"><a href="${item['basename'] | q}">${item['basename']}</a></li>
 		% endif
 	% endfor
 </ul>
