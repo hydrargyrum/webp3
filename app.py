@@ -260,6 +260,10 @@ def _static():
 def get_static(name):
 	return static_file(name, root='static')
 
+@route('/<path:path>/_/<name>')
+def get_static_sub(path, name):
+	return get_static(name)
+
 @route('/<tree>')
 def ls_tree(tree):
 	redirect('%s/' % tree)

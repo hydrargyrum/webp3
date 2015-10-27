@@ -6,9 +6,9 @@
 	%>
 	<meta charset="utf-8" />
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-	<script src="/_/player.js"></script>
-	<link href="/_/style.css" rel="stylesheet" />
-	<link rel="icon" type="image/png" href="/_/favicon.png" />
+	<script src="_/player.js"></script>
+	<link href="_/style.css" rel="stylesheet" />
+	<link rel="icon" type="image/png" href="_/favicon.png" />
 	<title>${relpath} - WebP3</title>
 </head>
 <body>
