@@ -262,7 +262,7 @@ def get_static(name):
 
 @route('/<tree>')
 def ls_tree(tree):
-	redirect('/%s/' % tree)
+	redirect('%s/' % tree)
 
 @route('/<tree>/')
 def ls_tree(tree):
@@ -309,7 +309,8 @@ def get_any(tree, path):
 		return get_file(dest)
 	elif os.path.isdir(dest):
 		if not path.endswith('/'):
-			redirect('/%s/%s/' % (tree, path))
+			last = os.path.basename(path)
+			redirect('%s/' % last)
 		return ls_dir(dest, '/%s/%s' % (tree, path))
 	else:
 		abort(403)
