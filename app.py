@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
+# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see static/COPYING.WTFPL]
 
 import os
 import re
@@ -22,7 +22,7 @@ AUDIO_EXTENSIONS = {'.flac': 'audio/flac', '.ogg': 'audio/ogg', '.mp3': 'audio/m
 CAN_OGGENCODE = False
 CAN_ZIP = False
 CURRENT_ZIPPING = threading.Semaphore(2) # limit DoS
-SYSPATH = os.path.join(os.path.dirname(__file__), 'sys')
+SYSPATH = os.path.join(os.path.dirname(__file__), 'static')
 TEMPLATE = os.path.join(SYSPATH, 'base.tpl')
 
 
@@ -258,7 +258,7 @@ def _static():
 
 @route('/_/<name>')
 def get_static(name):
-	return static_file(name, root='sys')
+	return static_file(name, root='static')
 
 @route('/<tree>')
 def ls_tree(tree):
