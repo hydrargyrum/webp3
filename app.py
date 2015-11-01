@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see static/COPYING.WTFPL]
 
+from functools import wraps
 import os
 import re
 import hashlib
@@ -91,6 +92,16 @@ def norm(path):
 	if path.startswith('../'):
 		raise Forbidden()
 	return path
+
+
+def utf8_args(func):
+	@wraps(func)
+	def decorator(*args, **kwargs):
+		args = [arg.decode('utf-8') for arg in args]
+		kwargs = {k: kwargs[k].decode('utf-8') for k in kwargs}
+		return func(*args, **kwargs)
+
+	return decorator
 
 
 class AudioRequestHandler:
@@ -257,24 +268,28 @@ def _static():
 	return get_static('robots.txt')
 
 @route('/_/<name>')
+@utf8_args
 def get_static(name):
 	return static_file(name, root='static')
 
 @route('/<path:path>/_/<name>')
+@utf8_args
 def get_static_sub(path, name):
 	return get_static(name)
 
 @route('/<tree>')
+@utf8_args
 def ls_tree(tree):
-	redirect('%s/' % tree)
+	redirect(u'%s/' % tree)
 
 @route('/<tree>/')
+@utf8_args
 def ls_tree(tree):
 	if tree not in ROOTS:
 		abort(404)
 
 	path = ROOTS[tree]
-	return ls_dir(path, '/%s' % tree)
+	return ls_dir(path, u'/%s' % tree)
 
 
 def get_file(path):
@@ -304,6 +319,7 @@ def get_file(path):
 
 
 @route('/<tree>/<path:path>')
+@utf8_args
 def get_any(tree, path):
 	if not path:
 		return ls_tree(tree)
@@ -314,7 +330,7 @@ def get_any(tree, path):
 	elif os.path.isdir(dest):
 		if not path.endswith('/'):
 			last = os.path.basename(path)
-			redirect('%s/' % last)
-		return ls_dir(dest, '/%s/%s' % (tree, path))
+			redirect(u'%s/' % last)
+		return ls_dir(dest, u'/%s/%s' % (tree, path))
 	else:
 		abort(403)
