@@ -14,7 +14,7 @@ import urllib
 import urlparse
 import zipfile
 
-from bottle import *
+from bottle import route, request, response, redirect, abort, mako_template, static_file
 
 
 ROOTS = {}
@@ -172,7 +172,7 @@ def _do_partial(size):
 		return None
 
 	if not header.startswith('bytes='):
-		self.send_error(400)
+		abort(400)
 
 	ranges = header[6:].split(',')
 	if len(ranges) != 1:
