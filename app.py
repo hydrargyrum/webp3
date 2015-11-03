@@ -220,6 +220,9 @@ def make_item_data(path):
 
 def ls_dir(path, urlpath):
 	files = os.listdir(path)
+	# remove names that can't be decoded
+	files = [f for f in files if isinstance(f, unicode)]
+
 	natural_sort_ci(files)
 
 	etag = gen_etag(path, files, is_file=True, weak=True)
