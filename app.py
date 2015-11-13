@@ -2,6 +2,7 @@
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see static/COPYING.WTFPL]
 
 from functools import wraps
+import errno
 import os
 import re
 import hashlib
@@ -104,6 +105,22 @@ def utf8_args(func):
 	return decorator
 
 
+def handle_oserror(func):
+	@wraps(func)
+	def decorator(*args, **kwargs):
+		try:
+			return func(*args, **kwargs)
+		except OSError as err:
+			if err.errno == errno.ENOENT:
+				abort(404, 'Not found')
+			elif err.errno == errno.EACCES:
+				abort(403, 'Forbidden')
+			else:
+				raise
+
+	return decorator
+
+
 class AudioRequestHandler:
 	def do_file(self, path, params=None):
 		etag = gen_etag(path, params, is_file=True, weak=bool(params))
@@ -159,7 +176,7 @@ def _do_etag(etag):
 
 	response.headers['ETag'] = etag
 	if etag in request.headers.get('If-None-Match', ''):
-		abort(304)
+		abort(304, 'Not modified')
 
 
 def _do_partial(size):
@@ -172,21 +189,21 @@ def _do_partial(size):
 		return None
 
 	if not header.startswith('bytes='):
-		abort(400)
+		abort(400, 'Bad request')
 
 	ranges = header[6:].split(',')
 	if len(ranges) != 1:
-		abort(400)
+		abort(400, 'Bad request')
 
 	r = ranges[0].split('-')
 	if len(r) != 2:
-		abort(400)
+		abort(400, 'Bad request')
 	start = int(r[0])
 	end = size - 1
 	if r[1]:
 		end = min(size - 1, int(r[1]))
 	if start >= size:
-		abort(416)
+		abort(416, 'Requested range not satisfiable')
 
 	response.status = 206
 	response.headers['Content-Range'] = '%s-%s/%s' % (start, end, size)
@@ -197,18 +214,18 @@ def _do_partial(size):
 
 def resolve_path(tree, path):
 	if tree not in ROOTS:
-		abort(404)
+		abort(404, 'Not found')
 
 	try:
 		path = norm(path)
 	except Forbidden:
-		abort(403)
+		abort(403, 'Forbidden')
 
 	root = ROOTS[tree]
 	res = os.path.join(root, path)
 
 	if not os.path.exists(res):
-		abort(404)
+		abort(404, 'Not found')
 
 	return res
 
@@ -218,6 +235,7 @@ def make_item_data(path):
 	return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
 
 
+@handle_oserror
 def ls_dir(path, urlpath):
 	files = os.listdir(path)
 	# remove names that can't be decoded
@@ -272,6 +290,7 @@ def _static():
 
 @route('/_/<name>')
 @utf8_args
+@handle_oserror
 def get_static(name):
 	return static_file(name, root='static')
 
@@ -289,12 +308,13 @@ def ls_tree(tree):
 @utf8_args
 def ls_tree(tree):
 	if tree not in ROOTS:
-		abort(404)
+		abort(404, 'Not found')
 
 	path = ROOTS[tree]
 	return ls_dir(path, u'/%s' % tree)
 
 
+@handle_oserror
 def get_file(path):
 	etag = gen_etag(path, is_file=True, weak=False)
 	_do_etag(etag)
@@ -336,4 +356,4 @@ def get_any(tree, path):
 			redirect(u'%s/' % last)
 		return ls_dir(dest, u'/%s/%s' % (tree, path))
 	else:
-		abort(403)
+		abort(403, 'Forbidden')
