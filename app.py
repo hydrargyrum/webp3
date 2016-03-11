@@ -8,11 +8,8 @@ import re
 import hashlib
 import mimetypes
 import subprocess
-import sys
 import tempfile
 import threading
-import urllib
-import urlparse
 import zipfile
 
 from bottle import route, request, response, redirect, abort, mako_template, static_file
@@ -121,7 +118,7 @@ def handle_oserror(func):
 	return decorator
 
 
-class AudioRequestHandler:
+class AudioRequestHandler(object):
 	def do_file(self, path, params=None):
 		etag = gen_etag(path, params, is_file=True, weak=bool(params))
 		if self.matches_etag(etag):
@@ -280,13 +277,16 @@ def ls_root():
 	else:
 		return body
 
+
 @route('/favicon.png')
-def _static():
+def _static_favicon():
 	return get_static('favicon.png')
 
+
 @route('/robots.txt')
-def _static():
+def _static_robots():
 	return get_static('robots.txt')
+
 
 @route('/_/<name>')
 @utf8_args
@@ -294,19 +294,22 @@ def _static():
 def get_static(name):
 	return static_file(name, root='static')
 
+
 @route('/<path:path>/_/<name>')
 @utf8_args
 def get_static_sub(path, name):
 	return get_static(name)
+
 
 @route('/<tree>')
 @utf8_args
 def ls_tree(tree):
 	redirect(u'%s/' % tree)
 
+
 @route('/<tree>/')
 @utf8_args
-def ls_tree(tree):
+def ls_tree_trailing(tree):
 	if tree not in ROOTS:
 		abort(404, 'Not found')
 
