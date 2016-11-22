@@ -77,19 +77,18 @@ def parent(s):
 		s = s[:-1]
 	return os.path.dirname(s)
 
+
 def norm(path):
-	'''
-	>>> norm('/foo/../bar//')
-	'bar'
+	"""
 	>>> norm('foo/bar/')
 	'foo/bar'
 	# norm('foo/../..') will raise Forbidden
-	'''
+	"""
 
 	path = os.path.normpath(path)
-	if path.startswith('/'):
-		path = path[1:]
-	if path.startswith('../'):
+	if os.path.isabs(path):
+		raise Forbidden()
+	elif path == '..' or path.startswith('..' + os.sep):
 		raise Forbidden()
 	return path
 
