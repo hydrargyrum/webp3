@@ -30,7 +30,9 @@ First, run something like:
 
 The command will not terminate, the files are served as long as WebP3 is running.
 
-Open `http://localhost:8000` to see (and play!) the music. There will be 2 roots, /music and /music2, serving respectively the full content of /path/to/some/files and /another/folder/to/share.
+Open `http://localhost:8000` to see (and play!) the music.
+
+There will be 2 roots, /music and /music2, serving respectively the full content of /path/to/some/files and /another/folder/to/share.
 
 ### Options
 
@@ -41,6 +43,8 @@ WebP3 will listen on port (default: 8000)
 ### WSGI
 
 WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
+When using WSGI, the mappings that were passed on command-line should now be placed in a "share.conf" file, with one "NAME=PATH" entry per line.
+Using the documented script in the "apache" folder, the installation is made in /srv/www/webp3.
 
 ## Dependencies
 
