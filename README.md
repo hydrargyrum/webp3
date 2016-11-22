@@ -18,6 +18,10 @@ It is designed to serve trees with a folder is an album (or contains other folde
 
 WebP3 doesn't use Flash and solely relies on HTML5's `<audio>` tag. File format support (like mp3) depends on your browser and OS.
 
+### JSON
+
+When "application/json" mimetype is present in the "Accept" HTTP header, the listing of the browsed directory is returned in JSON format.
+
 ## Usage
 
 First, run something like:
@@ -34,11 +38,16 @@ Open `http://localhost:8000` to see (and play!) the music. There will be 2 roots
 
 WebP3 will listen on port (default: 8000)
 
-`--zip`
+### WSGI
 
-When requested a URL of a directory with "?zip=1" appended, WebP3 will serve a zip archive of all files contained in the directory requested. This operation is not recursive.
+WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
 
-The zip file is stored in a temp dir on the server while the archive is transferred and is removed when the download is finished (or encountered an error). In order to limit an attacker requesting a lot of zip files at the same time to saturate the server disk, there can be only 2 zip requests at the same time, other requests return an error immediately.
+## Dependencies
+
+WebP3 is written in Python 3 and uses:
+
+* [Bottle web framework](http://bottlepy.org/)
+* [Mako templates](http://www.makotemplates.org/)
 
 ## License
 

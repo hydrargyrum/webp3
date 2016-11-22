@@ -1,3 +1,4 @@
-* support HEAD
 * responsive CSS
-* reimplement zipping and encoding
+* folder zip download
+* re-encoding to other format? downsampling?
+* js decoder for non-supported formats?
