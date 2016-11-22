@@ -183,6 +183,19 @@ function updateSeekbar() {
 	$("#seekbar").text('|' + left + '+' + right + '|');
 }
 
+function doSeek(event) {
+	var seeking = $(event.target).data("seeking");
+
+	if (!seeking)
+		return;
+
+	var player = $("#player").get(0);
+	var ratio = event.offsetX / event.target.offsetWidth;
+	var newTime = ratio * player.duration;
+
+	player.currentTime = newTime;
+}
+
 function blinkStart($s) {
 	var on = function() {
 		$s.css("visibility", "visible");
@@ -226,6 +239,18 @@ $(document).ready(function() {
 	$("#toolPrev").text("|<<");
 	$("#toolNext").text(">>|");
 	$("#toolPP").text(">");
+
+	$("#seekbar").on("mousedown", function(ev) {
+		$(ev.target).data("seeking", true);
+		doSeek(ev);
+	});
+	$("#seekbar").on("mousemove", doSeek);
+	$("#seekbar").on("mouseout", function(ev) {
+		$(ev.target).data("seeking", false);
+	});
+	$("#seekbar").on("mouseup", function(ev) {
+		$(ev.target).data("seeking", false);
+	});
 
 	$(window).on("keypress", function(e) {
 		switch (e.key) {
