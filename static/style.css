@@ -4,10 +4,6 @@
 	list-style-position: inside;
 }
 
-* {
-	font-size: small;
-}
-
 body {
 	font-family: monospace;
 	float: left;
