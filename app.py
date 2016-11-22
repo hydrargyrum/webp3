@@ -6,6 +6,7 @@ import errno
 import os
 import re
 import hashlib
+import json
 import mimetypes
 import subprocess
 import tempfile
@@ -232,6 +233,12 @@ def make_item_data(path):
 	return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
 
 
+def is_json_request():
+	# very rough parsing, to be improved if necessary
+	header = request.headers['accept']
+	return 'application/json' in re.split('[,;]', header)
+
+
 @handle_oserror
 def ls_dir(path, urlpath):
 	files = os.listdir(path)
@@ -250,11 +257,15 @@ def ls_dir(path, urlpath):
 	items.sort(key=lambda i: not i['is_dir']) # dirs first
 	files = [i['basename'] for i in items if is_audio(i['basename'])]
 
-	body = mako_template(TEMPLATE, items=items, files=files, relpath=urlpath, parent=parent).encode('utf-8')
+	if is_json_request():
+		response.headers['Content-Type'] = 'application/json'
+		body = json.dumps(items)
+	else:
+		response.headers['Content-Type'] = 'text/html'
+		body = mako_template(TEMPLATE, items=items, files=files, relpath=urlpath, parent=parent).encode('utf-8')
 
 	#~ if self.handle_partial(len(body)):
 		#~ return
-	response.headers['Content-Type'] = 'text/html'
 	#~ self.send_header('ETag', etag)
 	return body
 
@@ -267,9 +278,12 @@ def ls_root():
 	etag = gen_etag(ROOTS.keys(), weak=True)
 	_do_etag(etag)
 
-	response.headers['Content-Type'] = 'text/html'
-
-	body = mako_template(TEMPLATE, items=items, files=[], relpath='/', parent='/').encode('utf-8')
+	if is_json_request():
+		response.headers['Content-Type'] = 'application/json'
+		body = json.dumps(items)
+	else:
+		response.headers['Content-Type'] = 'text/html'
+		body = mako_template(TEMPLATE, items=items, files=[], relpath='/', parent='/').encode('utf-8')
 
 	range = _do_partial(len(body))
 	if range:
