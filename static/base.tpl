@@ -2,7 +2,7 @@
 <html>
 <head>
 	<%!
-		from urllib import quote
+		from urllib.parse import quote
 
 		def q(u):
 			return quote(u.encode('utf-8'))

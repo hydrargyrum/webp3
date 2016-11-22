@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see static/COPYING.WTFPL]
 
 from functools import wraps
@@ -33,12 +33,13 @@ class Forbidden(Exception):
 def natural_sort_ci(l):
 	def try_int(v):
 		try:
-			return int(v)
+			# force ints < strs
+			return (0, int(v))
 		except ValueError:
-			return v
+			return (1, v)
 
 	def natural_sort_ci_key(k):
-		return map(try_int, re.findall(r'\d+|\D+', k.lower()))
+		return list(map(try_int, re.findall(r'\d+|\D+', k.lower())))
 
 	l.sort(key=natural_sort_ci_key)
 
@@ -46,7 +47,7 @@ def natural_sort_ci(l):
 def gen_etag(*data, **kw):
 	if kw.get('is_file', False):
 		data = (data, os.stat(data[0]))
-	t = hashlib.new('md5', repr(data)).hexdigest()
+	t = hashlib.new('md5', repr(data).encode('utf-8')).hexdigest()
 	if kw.get('weak', True):
 		return 'W/"%s"' % t
 	else:
@@ -91,16 +92,6 @@ def norm(path):
 	if path.startswith('../'):
 		raise Forbidden()
 	return path
-
-
-def utf8_args(func):
-	@wraps(func)
-	def decorator(*args, **kwargs):
-		args = [arg.decode('utf-8') for arg in args]
-		kwargs = {k: kwargs[k].decode('utf-8') for k in kwargs}
-		return func(*args, **kwargs)
-
-	return decorator
 
 
 def handle_oserror(func):
@@ -242,8 +233,6 @@ def is_json_request():
 @handle_oserror
 def ls_dir(path, urlpath):
 	files = os.listdir(path)
-	# remove names that can't be decoded
-	files = [f for f in files if isinstance(f, unicode)]
 
 	natural_sort_ci(files)
 
@@ -303,26 +292,22 @@ def _static_robots():
 
 
 @route('/_/<name>')
-@utf8_args
 @handle_oserror
 def get_static(name):
 	return static_file(name, root='static')
 
 
 @route('/<path:path>/_/<name>')
-@utf8_args
 def get_static_sub(path, name):
 	return get_static(name)
 
 
 @route('/<tree>')
-@utf8_args
 def ls_tree(tree):
 	redirect(u'%s/' % tree)
 
 
 @route('/<tree>/')
-@utf8_args
 def ls_tree_trailing(tree):
 	if tree not in ROOTS:
 		abort(404, 'Not found')
@@ -343,7 +328,7 @@ def get_file(path):
 	range = _do_partial(os.path.getsize(path))
 	pos = 0
 
-	with open(path) as fd:
+	with open(path, 'rb') as fd:
 		if range:
 			fd.seek(range[0])
 			pos, end = range
@@ -359,7 +344,6 @@ def get_file(path):
 
 
 @route('/<tree>/<path:path>')
-@utf8_args
 def get_any(tree, path):
 	if not path:
 		return ls_tree(tree)

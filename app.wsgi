@@ -4,16 +4,17 @@ from __future__ import print_function
 import sys
 import os
 
-os.chdir(os.path.dirname(__file__))
-sys.path.append('.')
-
 import bottle
+
+os.chdir(os.path.dirname(__file__))
+sys.path.append(os.path.abspath('.'))
+
 import app
 
 
 with open('share.conf') as conf:
 	for line in conf:
-		line = line.decode('utf-8').rstrip()
+		line = line.rstrip()
 
 		try:
 			key, dest = line.split('=', 1)

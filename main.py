@@ -1,8 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see sys/COPYING.WTFPL]
 
 import argparse
+
 import bottle
+
 import app
 
 
@@ -22,10 +24,10 @@ def main():
 		fdata = fstr.split('=', 1)
 		if len(fdata) != 2 or not all(fdata):
 			parser.error('folders must be with format NAME=PATH')
-		key = fdata[0].decode('utf-8')
+		key = fdata[0]
 		if key in app.ROOTS:
 			parser.error('roots can only be specified once: %s' % key)
-		app.ROOTS[key] = fdata[1].decode('utf-8')
+		app.ROOTS[key] = fdata[1]
 
 	bottle.run(host='', port=args.port, debug=True)
 
