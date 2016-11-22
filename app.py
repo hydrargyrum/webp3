@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see static/COPYING.WTFPL]
+# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see COPYING.WTFPL]
 
 from functools import wraps
 import errno
