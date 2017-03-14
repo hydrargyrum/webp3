@@ -1,0 +1,7 @@
+include webp3/static/base.tpl
+include webp3/static/player.js
+include webp3/static/style.css
+include webp3/static/favicon.png
+include webp3/static/COPYING.WTFPL
+include webp3/webp3.wsgi
+include apache/install-webp3.sh

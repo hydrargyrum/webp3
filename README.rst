@@ -39,6 +39,9 @@ Thus, the URL can be given to an audio player like VLC.
 Usage
 +++++
 
+Standalone server
+-----------------
+
 First, run something like::
 
 	webp3.py -p 8000 music=/path/to/some/files music2=/another/folder/to/share
@@ -48,9 +51,6 @@ The command will not terminate, the files are served as long as WebP3 is running
 Open `http://localhost:8000 <http://localhost:8000>`_ to see (and play!) the music.
 
 There will be 2 roots, /music and /music2, serving respectively the full content of /path/to/some/files and /another/folder/to/share.
-
-Options
--------
 
 Command-line flags::
 
@@ -63,7 +63,12 @@ WSGI
 
 WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
 When using WSGI, the mappings that were passed on command-line should now be placed in a "share.conf" file, with one "NAME=PATH" entry per line.
-Using the documented script in the "apache" folder, the installation is made in /srv/www/webp3.
+
+Using the documented script in the "apache" folder, the installation is as follows:
+
+* the WebP3 code and WSGI is typically in a path like /usr/lib/python3/dist-packages/webp3
+* the Apache configuration is in /etc/apache2/sites-available/webp3.conf
+* the WebP3 config indicating the locations of the music files is at /etc/webp3.conf
 
 Using an Apache instance to run the WebP3 WSGI allows:
 

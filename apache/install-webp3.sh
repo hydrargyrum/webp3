@@ -1,15 +1,20 @@
 #!/bin/sh -e
 
+cd `dirname $0`/..
+
+pip3 install .
+
+cd apache
+
 # copy apache-specific config file
-cp webp3.conf /etc/apache2/sites-available
-# the config can be enabled with: a2ensite webp3
+cp -v webp3.conf /etc/apache2/sites-available
 
-TARGET=/srv/www/webp3
-# path where the webp3 app files (not music files!) will be installed
-# if this path is edited, webp3.conf MUST be edited as well
+echo "Please edit /etc/apache2/sites-available to specify the path where webp3 Python package is installed"
+# default value is /usr/lib/python3/dist-packages/webp3
+# this could actually be something like /usr/local/lib/python3.5/dist-packages/webp3
 
-mkdir -p $TARGET
-cp -R ../app.py ../app.wsgi ../static $TARGET
+echo "After, the config can be enabled with: a2ensite webp3"
 
-[ -f $TARGET/share.conf ] || touch $TARGET/share.conf
-# edit share.conf to specify where are the music folders
+touch /etc/webp3.conf
+echo "Please edit /etc/webp3.conf to specify where are the music files"
+
