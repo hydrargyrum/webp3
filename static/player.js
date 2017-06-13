@@ -50,11 +50,6 @@ function pl_enqueueDir() {
 	playlist_index = 0;
 
 	$("#player").attr("src", playlist[playlist_index]);
-	$("#player").on("ended", function() {
-		pl_next();
-		if (playlist_index != 0)
-			pl_play();
-	});
 
 	load(playlist[playlist_index]);
 }
@@ -235,6 +230,11 @@ $(document).ready(function() {
 
 	$("#player").on("durationchange", updateSeekbar);
 	$("#player").on("timeupdate", progressPlay);
+	$("#player").on("ended", function() {
+		pl_next();
+		if (playlist_index != 0)
+			pl_play();
+	});
 
 	$("#toolPrev").text("|<<");
 	$("#toolNext").text(">>|");
