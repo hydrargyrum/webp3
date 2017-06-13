@@ -2,12 +2,15 @@
 
 import os
 import json
+from urllib.parse import urljoin, quote as urlquote
 
-from bottle import route, response, redirect, mako_template, static_file
+from bottle import route, request, response, redirect, mako_template, static_file
 
 from .exceptions import NotFound, Forbidden
 from . import conf
-from .requestutils import is_json_request, base_request,gen_etag, handle_etag, handle_partial, slice_partial
+from .requestutils import (
+	is_json_request, is_m3u_request, base_request, gen_etag, handle_etag, handle_partial, slice_partial,
+)
 from .pathutils import get_mime, is_audio, resolve_path, natural_sort_ci, parent
 
 
@@ -32,6 +35,9 @@ def ls_dir(path, urlpath):
 	if is_json_request():
 		response.headers['Content-Type'] = 'application/json'
 		body = json.dumps(items)
+	elif is_m3u_request():
+		response.headers['Content-Type'] = 'audio/x-mpegurl'
+		body = ''.join(urljoin(request.url, urlquote(f)) + '\n' for f in files)
 	else:
 		response.headers['Content-Type'] = 'text/html'
 		body = mako_template(conf.TEMPLATE, items=items, files=files, relpath=urlpath, parent=parent).encode('utf-8')

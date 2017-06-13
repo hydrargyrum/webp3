@@ -22,6 +22,11 @@ WebP3 doesn't use Flash and solely relies on HTML5's `<audio>` tag. File format 
 
 When "application/json" mimetype is present in the "Accept" HTTP header, the listing of the browsed directory is returned in JSON format.
 
+### M3U
+
+When "audio/x-mpegurl" mimetype is present in the "Accept" HTTP header, or if the URL ends with "?m3u", the listing of files the browsed directory is returned in M3U playlist format.
+Thus, the URL can be given to an audio player like VLC.
+
 ## Usage
 
 First, run something like:

@@ -101,7 +101,26 @@ def slice_partial(data):
 		return data
 
 
-def is_json_request():
+def accepted_mimes():
 	# very rough parsing, to be improved if necessary
-	header = request.headers['accept']
-	return 'application/json' in re.split('[,;]', header)
+	try:
+		header = request.headers['accept']
+	except KeyError:
+		return []
+	return [t.split(';')[0] for t in header.split(',')]
+
+
+def is_json_request():
+	try:
+		return accepted_mimes()[0] == 'application/json'
+	except IndexError:
+		return False
+
+
+def is_m3u_request():
+	if 'm3u' in request.query:
+		return True
+	try:
+		return accepted_mimes()[0] == 'audio/x-mpegurl'
+	except IndexError:
+		return False
