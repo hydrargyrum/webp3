@@ -1,5 +1,6 @@
 /** You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see /_/COPYING.WTFPL] */
 
+var useRemainingTime = false;
 var playlist = [];
 var playlist_index = 0;
 
@@ -12,7 +13,12 @@ function pad(n, width, z) {
 
 /* duration2str(90) == "01:30" */
 function duration2str(t) {
-	return pad(parseInt(t / 60), 2) + ":" + pad(parseInt(t % 60), 2);
+	var pt = Math.abs(t);
+	var s = pad(parseInt(pt / 60), 2) + ":" + pad(parseInt(pt % 60), 2);
+
+	if (t < 0)
+		return "-" + s;
+	return s;
 }
 
 function unquote(url) {
@@ -209,7 +215,11 @@ function blinkStop($s) {
 }
 
 function progressPlay() {
-	$("#timeText").text(duration2str($("#player").get(0).currentTime));
+	var pos = $("#player").get(0).currentTime;
+	if (useRemainingTime)
+		pos -= $("#player").get(0).duration;
+
+	$("#timeText").text(duration2str(pos));
 	updateSeekbar();
 }
 
