@@ -28,7 +28,9 @@ def ls_dir(path, urlpath):
 	etag = gen_etag(path, files, is_file=True, weak=True)
 	handle_etag(etag)
 
-	items = [make_item_data(os.path.join(path, f)) for f in files]
+	files = [os.path.join(path, f) for f in files]
+	files = [f for f in files if not os.path.islink(f) and (os.path.isfile(f) or os.path.isdir(f))]
+	items = [make_item_data(f) for f in files]
 	items.sort(key=lambda i: not i['is_dir']) # dirs first
 	files = [i['basename'] for i in items if is_audio(i['basename'])]
 
@@ -136,6 +138,8 @@ def get_any(tree, path):
 		return ls_tree(tree)
 
 	dest = resolve_path(tree, path)
+	if os.path.islink(dest):
+		raise Forbidden()
 	if os.path.isfile(dest):
 		return get_file(dest)
 	elif os.path.isdir(dest):

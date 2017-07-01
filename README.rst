@@ -23,17 +23,17 @@ It is designed to serve trees where a folder is an album (or contains other fold
 Audio format support
 --------------------
 
-WebP3 doesn't use Flash and solely relies on HTML5's `<audio>` tag. So, audio file format support (like MP3) depends on your viewing browser and OS.
+WebP3 doesn't use Flash and solely relies on HTML5's ``<audio>`` tag. So, audio file format support (like MP3) depends on your viewing browser and OS.
 
 JSON
 ----
 
-When "application/json" mimetype is present in the "Accept" HTTP header, the listing of the browsed directory is returned in JSON format.
+When ``application/json`` mimetype is present in the ``Accept`` HTTP header, the listing of the browsed directory is returned in JSON format.
 
 M3U
 ---
 
-When "audio/x-mpegurl" mimetype is present in the "Accept" HTTP header, or if the URL ends with "?m3u", the listing of files the browsed directory is returned in M3U playlist format.
+When ``audio/x-mpegurl`` mimetype is present in the ``Accept`` HTTP header, or if the URL ends with ``?m3u``, the listing of files the browsed directory is returned in M3U playlist format.
 Thus, the URL can be given to an audio player like VLC.
 
 Usage
@@ -62,9 +62,9 @@ WSGI
 ----
 
 WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
-When using WSGI, the mappings that were passed on command-line should now be placed in a "share.conf" file, with one "NAME=PATH" entry per line.
+When using WSGI, the mappings that were passed on command-line should now be placed in a ``share.conf`` file, with one ``NAME=PATH`` entry per line.
 
-Using the documented script in the "apache" folder, the installation is as follows:
+Using the documented script in the ``apache`` folder, the installation is as follows:
 
 * the WebP3 code and WSGI is typically in a path like /usr/lib/python3/dist-packages/webp3
 * the Apache configuration is in /etc/apache2/sites-available/webp3.conf
@@ -82,6 +82,18 @@ WebP3 is written in Python 3 and uses:
 
 * `Bottle web framework <http://bottlepy.org/>`_
 * `Mako templates <http://www.makotemplates.org/>`_
+
+Security
+++++++++
+
+WebP3 does not write files. However, it gives access to all files and folders contained in directories specified in its configuration.
+Therefore, directory containing sensitive data should not be put in its configuration.
+
+WebP3 does not have by itself any authentication mechanism to restrict access to its content.
+If this is desired a proxy should be used, or access can be configured in an existing WSGI server (like Apache).
+
+WebP3 reads files with the process' permissions. For example, if using WSGI, WebP3 will likely read files with the ``www-data`` user's permissions.
+WebP3 does not follow symlinks.
 
 License
 +++++++

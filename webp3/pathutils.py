@@ -78,13 +78,19 @@ def norm(path):
 
 
 def resolve_path(tree, path):
-	if tree not in conf.ROOTS:
+	try:
+		root = conf.ROOTS[tree]
+	except KeyError:
 		raise NotFound()
 
 	path = norm(path)
 
-	root = conf.ROOTS[tree]
-	res = os.path.join(root, path)
+	res = root
+	parts = path.split(os.path.sep)
+	for p in parts:
+		res = os.path.join(res, p)
+		if os.path.islink(res):
+			raise Forbidden()
 
 	if not os.path.exists(res):
 		raise NotFound()

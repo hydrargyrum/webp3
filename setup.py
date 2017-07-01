@@ -7,7 +7,7 @@ import glob
 
 setup(
 	name='webp3',
-	version='0.2.1',
+	version='0.3.0',
 
 	description='Music player web app',
 	long_description='''
