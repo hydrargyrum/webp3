@@ -65,7 +65,8 @@ def handle_etag(etag):
 
 
 def handle_partial(size):
-	# returns True if caller should stop processing the request
+	response.headers['Accept-Ranges'] = 'bytes'
+
 	header = request.headers.get('Range')
 	if not header:
 		response.status = 200
@@ -90,7 +91,7 @@ def handle_partial(size):
 		abort(416, 'Requested range not satisfiable')
 
 	response.status = 206
-	response.headers['Content-Range'] = '%s-%s/%s' % (start, end, size)
+	response.headers['Content-Range'] = 'bytes %s-%s/%s' % (start, end, size)
 	response.headers['Content-Length'] = end - start + 1
 	return slice(start, end + 1)
 
@@ -98,7 +99,7 @@ def handle_partial(size):
 def slice_partial(data):
 	datarange = handle_partial(len(data))
 	if datarange:
-		return data
+		return data[datarange]
 
 
 def accepted_mimes():

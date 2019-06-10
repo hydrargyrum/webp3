@@ -112,22 +112,18 @@ def get_file(path):
 	if mime:
 		response.headers['Content-Type'] = mime
 
-	datarange = handle_partial(os.path.getsize(path))
-	has_range = datarange.stop is not None
-	pos = 0
+	maxsize = os.path.getsize(path)
+	datarange = handle_partial(maxsize)
+	if datarange.stop is None:
+		datarange = slice(0, maxsize)
 
 	with open(path, 'rb') as fd:
-		if has_range:
-			fd.seek(datarange.start)
-			pos, end = datarange.start, datarange.stop
+		fd.seek(datarange.start)
 
-		while (not has_range) or (pos < end):
-			data = fd.read(1024)
+		while fd.tell() < datarange.stop:
+			data = fd.read(min(1024, datarange.stop - fd.tell()))
 			if not data:
 				break
-			if has_range:
-				data = data[:end - pos]
-			pos += len(data)
 			yield data
 
 
