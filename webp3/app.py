@@ -9,7 +9,7 @@ from bottle import route, request, response, redirect, mako_template, static_fil
 from .exceptions import NotFound, Forbidden
 from . import conf
 from .requestutils import (
-	is_json_request, is_m3u_request, base_request, gen_etag, handle_etag, handle_partial, slice_partial,
+	is_json_request, is_m3u_request, base_request, gen_etag, handle_etag, slice_partial,
 )
 from .pathutils import get_mime, is_audio, resolve_path, natural_sort_ci, parent
 
@@ -112,19 +112,7 @@ def get_file(path):
 	if mime:
 		response.headers['Content-Type'] = mime
 
-	maxsize = os.path.getsize(path)
-	datarange = handle_partial(maxsize)
-	if datarange.stop is None:
-		datarange = slice(0, maxsize)
-
-	with open(path, 'rb') as fd:
-		fd.seek(datarange.start)
-
-		while fd.tell() < datarange.stop:
-			data = fd.read(min(1024, datarange.stop - fd.tell()))
-			if not data:
-				break
-			yield data
+	return static_file(os.path.basename(path), os.path.dirname(path))
 
 
 @route('/<tree>/<path:path>')
