@@ -6,7 +6,6 @@ import argparse
 import bottle
 
 from . import conf
-from . import app
 
 
 def main():

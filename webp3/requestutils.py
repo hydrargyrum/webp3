@@ -3,7 +3,6 @@
 from functools import wraps
 import errno
 import os
-import re
 import hashlib
 
 from bottle import request, response, abort
