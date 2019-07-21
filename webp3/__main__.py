@@ -10,6 +10,9 @@ from . import conf
 
 
 def main():
+	from . import app
+	app  # satifsy pyflakes
+
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
 	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
