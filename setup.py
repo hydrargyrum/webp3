@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
 	name='webp3',
-	version='0.3.1',
+	version='0.4.0',
 
 	description='Music player web app',
 	long_description='''
