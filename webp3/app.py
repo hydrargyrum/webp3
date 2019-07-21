@@ -1,38 +1,50 @@
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see COPYING.WTFPL]
 
-import os
 import json
 from urllib.parse import urljoin, quote as urlquote
+from pathlib import Path
 
 from bottle import route, request, response, redirect, mako_template, static_file
 
-from .exceptions import NotFound, Forbidden
+from .exceptions import Forbidden
 from . import conf
 from .requestutils import (
 	is_json_request, is_m3u_request, base_request, gen_etag, handle_etag, slice_partial,
 )
-from .pathutils import get_mime, is_audio, resolve_path, natural_sort_ci, parent
+from .pathutils import (
+	get_mime, is_audio, natural_sort_ci,
+	check_build_request_path, Request, relative_to_root,
+)
 
 
-def make_item_data(path):
-	basename = os.path.basename(path)
-	return dict(size=os.path.getsize(path), basename=basename, is_dir=os.path.isdir(path), is_audio=is_audio(basename))
+def make_item_data(path: Path) -> dict:
+	return {
+		'size': path.stat().st_size,
+		'basename': path.name,
+		'is_dir': path.is_dir(),
+		'is_audio': is_audio(path),
+		'path': path,
+	}
 
 
 @base_request
-def ls_dir(path, urlpath):
-	files = os.listdir(path)
+def ls_dir(req: Request):
+	files = list(req.target.iterdir())
 
 	natural_sort_ci(files)
 
-	etag = gen_etag(path, files, is_file=True, weak=True)
+	etag = gen_etag(files, path=req.target, weak=True)
 	handle_etag(etag)
 
-	files = [os.path.join(path, f) for f in files]
-	files = [f for f in files if not os.path.islink(f) and (os.path.isfile(f) or os.path.isdir(f))]
+	files = [f for f in files if not f.is_symlink() and (f.is_file() or f.is_dir())]
+
+	def naming_sort_key(f):
+		# dirs first
+		return (not f.is_dir(), f.name.lower())
+
+	files.sort(key=naming_sort_key)
 	items = [make_item_data(f) for f in files]
-	items.sort(key=lambda i: not i['is_dir']) # dirs first
-	files = [i['basename'] for i in items if is_audio(i['basename'])]
+	files = [i['basename'] for i in items if is_audio(i['path'])]
 
 	if is_json_request():
 		response.headers['Content-Type'] = 'application/json'
@@ -42,7 +54,13 @@ def ls_dir(path, urlpath):
 		body = ''.join(urljoin(request.url, urlquote(f)) + '\n' for f in files)
 	else:
 		response.headers['Content-Type'] = 'text/html'
-		body = mako_template(conf.TEMPLATE, items=items, files=files, relpath=urlpath, parent=parent).encode('utf-8')
+		body = mako_template(
+			conf.TEMPLATE,
+			items=items,
+			files=files,
+			relpath=Path('/').joinpath(req.path),
+			toroot=relative_to_root(req.path),
+		).encode('utf-8')
 
 	return slice_partial(body)
 
@@ -50,8 +68,14 @@ def ls_dir(path, urlpath):
 @route('/')
 @base_request
 def ls_root():
-	items = [dict(size=0, basename=k, is_dir=True, is_audio=False) for k in conf.ROOTS]
-	items.sort(key=lambda x: x['basename'])
+	items = [{
+		'size': 0,
+		'basename': k,
+		'is_dir': True,
+		'is_audio': False,
+		'path': conf.ROOTS[k],
+	} for k in conf.ROOTS]
+	items.sort(key=lambda x: x['basename'].lower())
 
 	etag = gen_etag(list(conf.ROOTS), weak=True)
 	handle_etag(etag)
@@ -61,7 +85,13 @@ def ls_root():
 		body = json.dumps(items)
 	else:
 		response.headers['Content-Type'] = 'text/html'
-		body = mako_template(conf.TEMPLATE, items=items, files=[], relpath='/', parent='/').encode('utf-8')
+		body = mako_template(
+			conf.TEMPLATE,
+			items=items,
+			files=[],
+			relpath=Path('/'),
+			toroot=Path('.'),
+		).encode('utf-8')
 
 	return slice_partial(body)
 
@@ -82,37 +112,28 @@ def get_static(name):
 	return static_file(name, root=conf.WEBPATH)
 
 
-@route('/<path:path>/_/<name>')
-def get_static_sub(path, name):
-	return get_static(name)
-
-
 @route('/<tree>')
 def ls_tree(tree):
-	redirect(u'%s/' % tree)
+	redirect(f'{tree}/')
 
 
 @route('/<tree>/')
 @base_request
 def ls_tree_trailing(tree):
-	try:
-		path = conf.ROOTS[tree]
-	except KeyError:
-		raise NotFound()
-
-	return ls_dir(path, u'/%s' % tree)
+	req = check_build_request_path(tree, '/')
+	return ls_dir(req)
 
 
 @base_request
-def get_file(path):
-	etag = gen_etag(path, is_file=True, weak=False)
+def get_file(path: Path):
+	etag = gen_etag(path=path, weak=False)
 	handle_etag(etag)
 
 	mime = get_mime(path)
 	if mime:
 		response.headers['Content-Type'] = mime
 
-	return static_file(os.path.basename(path), os.path.dirname(path))
+	return static_file(path.name, str(path.parent))
 
 
 @route('/<tree>/<path:path>')
@@ -121,15 +142,14 @@ def get_any(tree, path):
 	if not path:
 		return ls_tree(tree)
 
-	dest = resolve_path(tree, path)
-	if os.path.islink(dest):
-		raise Forbidden()
-	if os.path.isfile(dest):
+	req = check_build_request_path(tree, f'/{path}')
+	dest = req.target
+
+	if dest.is_file():
 		return get_file(dest)
-	elif os.path.isdir(dest):
+	elif dest.is_dir():
 		if not path.endswith('/'):
-			last = os.path.basename(path)
-			redirect(u'%s/' % last)
-		return ls_dir(dest, u'/%s/%s' % (tree, path))
+			redirect(f'{path.name}/')
+		return ls_dir(req)
 	else:
 		raise Forbidden()

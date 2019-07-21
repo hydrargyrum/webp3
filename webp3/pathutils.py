@@ -1,16 +1,22 @@
 # license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see COPYING.WTFPL]
 
+from collections import namedtuple
 import os
 import re
 import hashlib
 import mimetypes
+from pathlib import Path
+from typing import List
 
 from .exceptions import Forbidden, NotFound
 from . import conf
 
 
-def natural_sort_ci(l):
-	def try_int(v):
+Request = namedtuple('Request', ('tree', 'root', 'path', 'target'))
+
+
+def natural_sort_ci(l: List[Path]) -> List[Path]:
+	def try_int(v: str):
 		try:
 			# force ints < strs
 			return (0, int(v))
@@ -18,81 +24,62 @@ def natural_sort_ci(l):
 			return (1, v)
 
 	def natural_sort_ci_key(k):
-		return list(map(try_int, re.findall(r'\d+|\D+', k.lower())))
+		return [try_int(v) for v in re.findall(r'\d+|\D+', k.name.lower())]
 
 	l.sort(key=natural_sort_ci_key)
 
 
-def gen_etag(*data, **kw):
-	if kw.get('is_file', False):
-		data = (data, os.stat(data[0]))
+def gen_etag(*data, path=None, weak: bool = True) -> str:
+	if path:
+		data = (data, path.stat())
 	t = hashlib.new('md5', repr(data).encode('utf-8')).hexdigest()
-	if kw.get('weak', True):
+	if weak:
 		return 'W/"%s"' % t
 	else:
 		return '"%s"' % t
 
 
-def is_audio(name):
-	return any(name.endswith(ext) for ext in conf.AUDIO_EXTENSIONS)
+def is_audio(path: Path) -> bool:
+	return any(path.name.endswith(ext) for ext in conf.AUDIO_EXTENSIONS)
 
 
-def get_mime(path):
+def get_mime(path: Path) -> str:
 	for ext in conf.AUDIO_EXTENSIONS:
-		if path.endswith(ext):
+		if path.name.endswith(ext):
 			return conf.AUDIO_EXTENSIONS[ext]
 	return mimetypes.guess_type(path)[0]
 
 
-def parent(s):
-	"""
-	>>> parent('/foo/bar')
-	'/foo'
-	>>> parent('/foo/bar/')
-	'/foo'
-	"""
-
-	if s.endswith('/'):
-		s = s[:-1]
-	return os.path.dirname(s)
-
-
-def norm(path):
-	"""
-	>>> norm('foo//bar/../bar/')
-	'foo/bar'
-	>>> norm('foo/../..')
-	Traceback (most recent call last):
-	Forbidden
-	>>> norm('/foo')
-	Traceback (most recent call last):
-	Forbidden
-	"""
-
-	path = os.path.normpath(path)
-	if os.path.isabs(path):
-		raise Forbidden()
-	elif path == '..' or path.startswith('..' + os.sep):
-		raise Forbidden()
-	return path
-
-
-def resolve_path(tree, path):
+def build_request_path(tree: str, reqpath: str) -> Request:
 	try:
 		root = conf.ROOTS[tree]
 	except KeyError:
 		raise NotFound()
 
-	path = norm(path)
+	# path.resolve() would resolve symlinks, which might be an info leak...
+	# sad pathlib is incapable of normalizing (removing ".." etc.) a path
+	# without following symlinks
+	path = Path(os.path.normpath(reqpath))
 
-	res = root
-	parts = path.split(os.path.sep)
-	for p in parts:
-		res = os.path.join(res, p)
-		if os.path.islink(res):
-			raise Forbidden()
+	assert path.is_absolute()
+	path = Path(*path.parts[1:])
+	assert not path.is_absolute()
 
-	if not os.path.exists(res):
+	target = root.joinpath(path).resolve()
+	assert target.relative_to(root)
+
+	return Request(tree=tree, root=root, path=path, target=target)
+
+
+def check_build_request_path(tree: str, reqpath: str) -> Request:
+	req = build_request_path(tree, reqpath)
+
+	if req.target.is_symlink():
+		raise Forbidden()
+	if not req.target.exists():
 		raise NotFound()
+	return req
 
-	return res
+
+def relative_to_root(current: Path) -> Path:
+	return Path(*((len(current.parts) + 1) * ['..']))

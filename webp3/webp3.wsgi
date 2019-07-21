@@ -3,6 +3,7 @@
 from __future__ import print_function
 import sys
 import os
+from pathlib import Path
 
 import bottle
 import webp3.conf
@@ -27,7 +28,7 @@ def read_conf(environ):
 			if key in roots:
 				raise RuntimeError('duplicate key %r' % key)
 
-			roots[key] = dest
+			roots[key] = Path(dest)
 		webp3.conf.ROOTS = roots
 
 

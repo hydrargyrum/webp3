@@ -3,7 +3,6 @@
 
 from setuptools import setup, find_packages
 
-import glob
 
 setup(
 	name='webp3',
@@ -39,11 +38,9 @@ hosted on some million-dollars cloud, it's hosted on your machine.
 		'Topic :: Multimedia :: Sound/Audio :: Players',
 
 		'Programming Language :: Python :: 3',
-		'Programming Language :: Python :: 3.2',
-		'Programming Language :: Python :: 3.3',
-		'Programming Language :: Python :: 3.4',
-		'Programming Language :: Python :: 3.5',
 		'Programming Language :: Python :: 3.6',
+		'Programming Language :: Python :: 3.7',
+		'Programming Language :: Python :: 3.8',
 	],
 	keywords='music server web player html5 audio',
 

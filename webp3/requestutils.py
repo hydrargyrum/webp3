@@ -2,7 +2,6 @@
 
 from functools import wraps
 import errno
-import os
 import hashlib
 
 from bottle import request, response, abort
@@ -11,9 +10,9 @@ from .exceptions import NotFound, Forbidden
 from . import conf
 
 
-def gen_etag(*data, is_file=False, weak=True):
-	if is_file:
-		data = (data, os.stat(data[0]))
+def gen_etag(*data, path=None, weak: bool = True):
+	if path:
+		data = (data, path.stat())
 
 	t = hashlib.new('md5', repr(data).encode('utf-8')).hexdigest()
 	if weak:
@@ -51,7 +50,8 @@ def handle_patherrors(func):
 	return decorator
 
 
-base_request = lambda func: handle_patherrors(handle_oserror(func))
+def base_request(func):
+	return handle_patherrors(handle_oserror(func))
 
 
 def handle_etag(etag):
@@ -63,7 +63,7 @@ def handle_etag(etag):
 		abort(304, 'Not modified')
 
 
-def handle_partial(size):
+def handle_partial(size: int):
 	response.headers['Accept-Ranges'] = 'bytes'
 
 	header = request.headers.get('Range')
@@ -101,7 +101,7 @@ def slice_partial(data):
 		return data[datarange]
 
 
-def accepted_mimes():
+def accepted_mimes() -> list:
 	# very rough parsing, to be improved if necessary
 	try:
 		header = request.headers['accept']
@@ -110,14 +110,14 @@ def accepted_mimes():
 	return [t.split(';')[0] for t in header.split(',')]
 
 
-def is_json_request():
+def is_json_request() -> bool:
 	try:
 		return accepted_mimes()[0] == 'application/json'
 	except IndexError:
 		return False
 
 
-def is_m3u_request():
+def is_m3u_request() -> bool:
 	if 'm3u' in request.query:
 		return True
 	try:
