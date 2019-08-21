@@ -47,7 +47,7 @@ def get_mime(path: Path) -> str:
 	for ext in conf.AUDIO_EXTENSIONS:
 		if path.name.endswith(ext):
 			return conf.AUDIO_EXTENSIONS[ext]
-	return mimetypes.guess_type(path)[0]
+	return mimetypes.guess_type(str(path))[0]
 
 
 def build_request_path(tree: str, reqpath: str) -> Request:
