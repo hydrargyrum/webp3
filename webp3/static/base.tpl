@@ -35,6 +35,7 @@
 </ul>
 
 <div><a href="javascript:pl_playDir()">Play directory</a></div>
+<div><a href="?m3u">Playlist</a></div>
 
 <img id="albumCover" />
 
