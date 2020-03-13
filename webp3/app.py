@@ -4,7 +4,7 @@ import json
 from urllib.parse import urljoin, quote as urlquote
 from pathlib import Path
 
-from bottle import route, request, response, redirect, mako_template, static_file
+from bottle import request, response, redirect, mako_template, static_file, Bottle
 
 from .exceptions import Forbidden
 from . import conf
@@ -25,6 +25,9 @@ def make_item_data(path: Path) -> dict:
 		'is_audio': is_audio(path),
 		'path': path,
 	}
+
+
+bapp = Bottle()
 
 
 @base_request
@@ -65,7 +68,7 @@ def ls_dir(req: Request):
 	return slice_partial(body)
 
 
-@route('/')
+@bapp.route('/')
 @base_request
 def ls_root():
 	items = [{
@@ -96,28 +99,28 @@ def ls_root():
 	return slice_partial(body)
 
 
-@route('/favicon.png')
+@bapp.route('/favicon.png')
 def _static_favicon():
 	return get_static('favicon.png')
 
 
-@route('/robots.txt')
+@bapp.route('/robots.txt')
 def _static_robots():
 	return get_static('robots.txt')
 
 
-@route('/_/<name>')
+@bapp.route('/_/<name>')
 @base_request
 def get_static(name):
 	return static_file(name, root=conf.WEBPATH)
 
 
-@route('/<tree>')
+@bapp.route('/<tree>')
 def ls_tree(tree):
 	redirect(f'{tree}/')
 
 
-@route('/<tree>/')
+@bapp.route('/<tree>/')
 @base_request
 def ls_tree_trailing(tree):
 	req = check_build_request_path(tree, '/')
@@ -136,7 +139,7 @@ def get_file(path: Path):
 	return static_file(path.name, str(path.parent))
 
 
-@route('/<tree>/<path:path>')
+@bapp.route('/<tree>/<path:path>')
 @base_request
 def get_any(tree, path):
 	if not path:

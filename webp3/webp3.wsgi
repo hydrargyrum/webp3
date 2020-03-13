@@ -40,5 +40,5 @@ def decorate(func):
 	return wrapper
 
 
-application = bottle.default_app()
+application = webp3.app.bapp
 application.wsgi = decorate(application.wsgi)

@@ -4,14 +4,11 @@
 import argparse
 from pathlib import Path
 
-import bottle
-
 from . import conf
 
 
 def main():
-	from . import app
-	app  # satifsy pyflakes
+	from .app import bapp
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
@@ -29,7 +26,7 @@ def main():
 			parser.error('roots can only be specified once: %s' % key)
 		conf.ROOTS[key] = Path(fdata[1])
 
-	bottle.run(host='', port=args.port, debug=True)
+	bapp.run(host='', port=args.port, debug=True)
 
 
 if __name__ == '__main__':
