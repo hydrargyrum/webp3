@@ -80,8 +80,8 @@ Dependencies
 
 WebP3 is written in Python 3 and uses:
 
-* `Bottle web framework <http://bottlepy.org/>`_
-* `Mako templates <http://www.makotemplates.org/>`_
+* `Bottle web framework <https://bottlepy.org/>`_
+* `Mako templates <https://www.makotemplates.org/>`_
 
 Security
 ++++++++
@@ -95,7 +95,14 @@ If this is desired a proxy should be used, or access can be configured in an exi
 WebP3 reads files with the process' permissions. For example, if using WSGI, WebP3 will likely read files with the ``www-data`` user's permissions.
 WebP3 does not follow symlinks.
 
+Install
++++++++
+
+On `PyPI <https://pypi.org/project/webp3/>`_::
+
+	pip install webp3
+
 License
 +++++++
 
-WebP3 is licensed under the `do What The Fuck you want Public License v2 <http://wtfpl.net>`_.
+WebP3 is licensed under the `do What The Fuck you want Public License v2 <https://wtfpl.net>`_.

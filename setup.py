@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# this project is licensed under the WTFPLv2, see COPYING.txt for details
+# this project is licensed under the WTFPL, see COPYING.txt for details
 
 from setuptools import setup, find_packages
 
@@ -21,7 +21,7 @@ hosted on some million-dollars cloud, it's hosted on your machine.
 	url='https://github.com/hydrargyrum/webp3',
 	author='Hg',
 	author_email='dev+pip@indigo.re',
-	license='WTFPLv2',
+	license='WTFPL',
 	classifiers=[
 		'Development Status :: 4 - Beta',
 
