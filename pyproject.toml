@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "webp3"
+dynamic = ["version"]
+description = "Music player web app"
+readme = "README.rst"
+license = "WTFPL"
+requires-python = ">=3"
+authors = [
+    { name = "Hg", email = "dev@indigo.re" },
+]
+keywords = [
+    "audio",
+    "html5",
+    "music",
+    "player",
+    "server",
+    "web",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Bottle",
+    "Intended Audience :: End Users/Desktop",
+    "License :: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication",
+    "License :: Public Domain",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
+]
+dependencies = [
+    "bottle",
+    "Mako > 1.0",
+]
+
+[project.scripts]
+webp3 = "webp3:main"
+
+[project.urls]
+Homepage = "https://gitlab.com/hydrargyrum/webp3"
+
+[tool.hatch.version]
+path = "webp3/__init__.py"
+
+[tool.hatch.build.targets.wheel.shared-data]
+"apache/install-webp3.rst" = "share/webp3/apache/install-webp3.rst"
+"apache/webp3.conf" = "share/webp3/apache/webp3.conf"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/webp3",
+    "/apache",
+]
