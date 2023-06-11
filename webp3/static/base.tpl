@@ -24,7 +24,9 @@
 <h4 class="title">${relpath}</h4>
 
 <ul id="listing">
+	% if str(toroot) != ".":
 	<li class="parent"><a href="..">Parent</a></li>
+	% endif
 	% for item in items:
 		% if item['is_dir']:
 			<li class="dir"><a href="${item['basename'] | q}/">${item['basename']}</a>/</li>
