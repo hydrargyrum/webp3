@@ -62,7 +62,7 @@ WSGI
 ----
 
 WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
-When using WSGI, the mappings that were passed on command-line should now be placed in a ``share.conf`` file, with one ``NAME=PATH`` entry per line.
+When using WSGI, the mappings that were passed on command-line should now be placed in a ``webp3.conf`` file, with one ``NAME=PATH`` entry per line.
 
 Using the documented script in the ``apache`` folder, the installation is as follows:
 
@@ -74,6 +74,8 @@ Using an Apache instance to run the WebP3 WSGI allows:
 
 * HTTPS
 * serving the music tree under an URL prefix
+
+If not using the default location, the config file can be passed in env variable ``WEBP3_CONF``.
 
 Dependencies
 ++++++++++++

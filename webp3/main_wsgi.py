@@ -8,7 +8,7 @@ import webp3.app
 
 
 def read_conf(environ):
-	path = environ.get('webp3.conf', '/etc/webp3.conf')
+	path = environ.get('webp3.conf', os.environ.get('WEBP3_CONF', '/etc/webp3.conf'))
 	if not os.path.exists(path):
 		raise RuntimeError('missing config file')
 
