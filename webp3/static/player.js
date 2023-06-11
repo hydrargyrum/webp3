@@ -1,4 +1,4 @@
-/** You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see /_/COPYING.WTFPL] */
+/** SPDX-License-Identifier: WTFPL */
 
 var useRemainingTime = false;
 var playlist = [];

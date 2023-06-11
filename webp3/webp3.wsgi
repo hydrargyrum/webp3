@@ -1,4 +1,4 @@
-# license: You can redistribute this file and/or modify it under the terms of the WTFPLv2 [see COPYING.WTFPL]
+# SPDX-License-Identifier: WTFPL
 
 from __future__ import print_function
 import sys
