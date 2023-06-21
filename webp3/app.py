@@ -30,6 +30,14 @@ def make_item_data(path: Path) -> dict:
 bapp = Bottle()
 
 
+def build_absolute_url(req, name: str) -> str:
+	path = str(req.path)
+	if conf.BASE_URL:
+		return "/".join((conf.BASE_URL.rstrip("/"), req.tree, path, urlquote(name)))
+	else:
+		return urljoin(request.url, urlquote(name))
+
+
 @base_request
 def ls_dir(req: Request):
 	files = list(req.target.iterdir())
@@ -54,7 +62,7 @@ def ls_dir(req: Request):
 		body = json.dumps(items)
 	elif is_m3u_request():
 		response.headers['Content-Type'] = 'audio/x-mpegurl'
-		body = ''.join(urljoin(request.url, urlquote(f)) + '\n' for f in files)
+		body = ''.join(build_absolute_url(req, f) + '\n' for f in files)
 	else:
 		response.headers['Content-Type'] = 'text/html'
 		body = mako_template(

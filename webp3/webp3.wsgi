@@ -31,6 +31,8 @@ def read_conf(environ):
 			roots[key] = Path(dest)
 		webp3.conf.ROOTS = roots
 
+	webp3.conf.BASE_URL = os.environ.get("WEBP3_BASEURL")
+
 
 def decorate(func):
 	def wrapper(environ, starter):
