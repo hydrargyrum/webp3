@@ -102,7 +102,7 @@ Install
 
 On `PyPI <https://pypi.org/project/webp3/>`_::
 
-	pip install webp3
+	pipx install webp3
 
 License
 +++++++
