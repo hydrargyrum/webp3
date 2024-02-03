@@ -33,6 +33,13 @@ Thus, the URL can be given to an audio player like VLC.
 
 ## Usage
 
+### Podman/Docker
+
+WebP3 can be run as a container:
+
+    podman build -t localhost/webp3 -f Containerfile
+    podman run --rm -d -v /path/to/some/files:/media:ro -p 8000:8000 localhost/webp3
+
 ### Standalone server
 
 First, run something like:
