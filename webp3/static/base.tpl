@@ -12,7 +12,7 @@
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 	<script src="${toroot}/_/player.js"></script>
 	<link href="${toroot}/_/style.css" rel="stylesheet" />
-	<link rel="icon" type="image/png" href="_/favicon.png" />
+	<link rel="icon" type="image/png" href="${toroot}/_/favicon.png" />
 	<title>${relpath} - WebP3</title>
 </head>
 <body>
