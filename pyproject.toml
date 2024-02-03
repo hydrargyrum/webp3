@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "webp3"
 dynamic = ["version"]
 description = "Music player web app"
-readme = "README.rst"
+readme = "README.md"
 license = "WTFPL"
 requires-python = ">=3"
 authors = [
