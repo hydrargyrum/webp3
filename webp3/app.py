@@ -79,6 +79,9 @@ def ls_dir(req: Request):
 @bapp.route('/')
 @base_request
 def ls_root():
+	if conf.SINGLE_ROOT:
+		return ls_tree_trailing(None)
+
 	items = [{
 		'size': 0,
 		'basename': k,
@@ -125,12 +128,21 @@ def get_static(name):
 
 @bapp.route('/<tree>')
 def ls_tree(tree):
+	if conf.SINGLE_ROOT:
+		return get_any(None, tree)
+
 	redirect(f'{tree}/')
 
 
 @bapp.route('/<tree>/')
 @base_request
 def ls_tree_trailing(tree):
+	if conf.SINGLE_ROOT:
+		if tree is None:
+			tree = "media"
+		else:
+			return get_any(None, f"{tree}/")
+
 	req = check_build_request_path(tree, '/')
 	return ls_dir(req)
 
@@ -150,6 +162,13 @@ def get_file(path: Path):
 @bapp.route('/<tree>/<path:path>')
 @base_request
 def get_any(tree, path):
+	if conf.SINGLE_ROOT:
+		if tree is None:
+			tree = "media"
+		else:
+			path = f"{tree}/{path}"
+			tree = "media"
+
 	if not path:
 		return ls_tree(tree)
 

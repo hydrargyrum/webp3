@@ -82,4 +82,7 @@ def check_build_request_path(tree: str, reqpath: str) -> Request:
 
 
 def relative_to_root(current: Path) -> Path:
-	return Path(*((len(current.parts) + 1) * ['..']))
+	times = len(current.parts)
+	if not conf.SINGLE_ROOT:
+		times += 1
+	return Path(*(".." for _ in range(times)))

@@ -8,9 +8,22 @@ import webp3.app
 
 
 def read_conf(environ):
-	path = environ.get('webp3.conf', os.environ.get('WEBP3_CONF', '/etc/webp3.conf'))
+	single_root = os.environ.get("WEBP3_SINGLE_ROOT")
+	if single_root:
+		if not os.path.exists(single_root):
+			raise FileNotFoundError(f"media root {single_root!r} does not exist")
+		webp3.conf.SINGLE_ROOT = True
+		webp3.conf.ROOTS = {"media": Path(single_root)}
+	else:
+		conf_path = environ.get('webp3.conf', os.environ.get('WEBP3_CONF', '/etc/webp3.conf'))
+		read_conf_file(conf_path)
+
+	webp3.conf.BASE_URL = os.environ.get("WEBP3_BASEURL")
+
+
+def read_conf_file(path):
 	if not os.path.exists(path):
-		raise RuntimeError('missing config file')
+		raise FileNotFoundError(f'missing config file {path}')
 
 	with open(path) as conf:
 		roots = {}
@@ -27,8 +40,6 @@ def read_conf(environ):
 
 			roots[key] = Path(dest)
 		webp3.conf.ROOTS = roots
-
-	webp3.conf.BASE_URL = os.environ.get("WEBP3_BASEURL")
 
 
 def decorate(func):

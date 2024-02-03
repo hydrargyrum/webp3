@@ -1,17 +1,25 @@
 # SPDX-License-Identifier: WTFPL
 
-from __future__ import print_function
-import sys
 import os
 from pathlib import Path
 
-import bottle
 import webp3.conf
 import webp3.app
 
 
 def read_conf(environ):
-	path = environ.get('webp3.conf', os.environ.get('WEBP3_CONF', '/etc/webp3.conf'))
+	single_root = os.environ.get("WEBP3_SINGLE_ROOT")
+	if single_root:
+		webp3.conf.SINGLE_ROOT = True
+		webp3.conf.ROOTS = {"media": single_root}
+	else:
+		conf_path = environ.get('webp3.conf', os.environ.get('WEBP3_CONF', '/etc/webp3.conf'))
+		read_conf_file(conf_path)
+
+	webp3.conf.BASE_URL = os.environ.get("WEBP3_BASEURL")
+
+
+def read_conf_file(path):
 	if not os.path.exists(path):
 		raise RuntimeError('missing config file')
 
@@ -30,8 +38,6 @@ def read_conf(environ):
 
 			roots[key] = Path(dest)
 		webp3.conf.ROOTS = roots
-
-	webp3.conf.BASE_URL = os.environ.get("WEBP3_BASEURL")
 
 
 def decorate(func):

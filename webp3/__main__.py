@@ -15,13 +15,21 @@ def main():
 	parser.add_argument('folders', metavar='NAME=PATH', nargs='+', help='give access to PATH under /NAME/')
 	parser.add_argument('-p', '--port', metavar='PORT', default=8000, type=int, help='listen on PORT')
 	parser.add_argument('-b', '--base-url', help='Absolute URLs start at BASE_URL')
+	parser.add_argument('--single-root', action='store_true', help="Only show a single folder directly")
 	args = parser.parse_args()
 
 	conf.ROOTS = {}
+	conf.SINGLE_ROOT = args.single_root
+
+	if args.single_root and len(args.folders) > 1:
+		parser.error('there can only be one folder with --single-root')
 
 	for fstr in args.folders:
 		fdata = fstr.split('=', 1)
-		if len(fdata) != 2 or not all(fdata):
+		if args.single_root:
+			# accept foo=/dir or just /dir, force key to "media"
+			fdata = ('media', fdata[-1])
+		elif len(fdata) != 2 or not all(fdata):
 			parser.error('folders must be with format NAME=PATH')
 		key = fdata[0]
 		if key in conf.ROOTS:

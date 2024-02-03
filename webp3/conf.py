@@ -4,6 +4,7 @@ import os
 
 
 ROOTS = {}
+SINGLE_ROOT = False
 
 MATCH_ETAG = True
 

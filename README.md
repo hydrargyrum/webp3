@@ -51,6 +51,12 @@ Command-line flags:
 
 WebP3 will listen on port (default: 8000)
 
+#### Single root
+
+If it's not needed to have multiple roots, it's possible to run instead
+
+    webp3.py -p 8000 --single-root /path/to/some/files
+
 ### WSGI
 
 WebP3 can be set up to run as a WSGI app, for example to be served by an existing Apache instance.
