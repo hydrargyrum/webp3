@@ -20,4 +20,4 @@ FROM wsgiref AS gunicorn
 
 RUN python3 -m pip install gunicorn
 
-CMD WEBP3_SINGLE_ROOT=/media python3 -m gunicorn --bind=0.0.0.0:8000 --name=webp3 webp3.main_wsgi
+CMD WEBP3_SINGLE_ROOT=/media python3 -m gunicorn --bind=0.0.0.0:8000 --access-logfile=- --name=webp3 webp3.main_wsgi
