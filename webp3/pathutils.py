@@ -15,7 +15,7 @@ from . import conf
 Request = namedtuple('Request', ('tree', 'root', 'path', 'target'))
 
 
-def natural_sort_ci(l: List[Path]) -> List[Path]:
+def natural_sort_ci(paths: List[Path]) -> List[Path]:
 	def try_int(v: str):
 		try:
 			# force ints < strs
@@ -26,7 +26,7 @@ def natural_sort_ci(l: List[Path]) -> List[Path]:
 	def natural_sort_ci_key(k):
 		return [try_int(v) for v in re.findall(r'\d+|\D+', k.name.lower())]
 
-	l.sort(key=natural_sort_ci_key)
+	paths.sort(key=natural_sort_ci_key)
 
 
 def gen_etag(*data, path=None, weak: bool = True) -> str:
