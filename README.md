@@ -37,8 +37,15 @@ Thus, the URL can be given to an audio player like VLC.
 
 WebP3 can be run as a container:
 
-    podman build -t localhost/webp3 -f Containerfile
-    podman run --rm -d -v /path/to/some/files:/media:ro -p 8000:8000 localhost/webp3
+    podman run --rm -d \
+        -e WEBP3_BASE_URL=https://your.example/webp3/ \
+        -v /path/to/some/files:/media:ro \
+        -p 8000:8000 \
+        registry.gitlab.com/hydrargyrum/webp3
+
+If you want to have several music directories that are not under the same parent dir, add several volumes to `/media` subdirectories:
+
+    podman run --rm -d -v /path/to/some/files:/media/first:ro -v /another/folder/to/share:/media/second:ro -p 8000:8000 registry.gitlab.com/hydrargyrum/webp3
 
 ### Standalone server
 
