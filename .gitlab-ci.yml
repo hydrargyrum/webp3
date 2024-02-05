@@ -1,0 +1,43 @@
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    PYTHONDEVMODE: "1"
+
+cache:
+    paths:
+      - ".cache/pip"
+
+lint:
+    stage: "build"
+    image: "python:3-slim"
+    script:
+      - "pip install flake8"
+      - "flake8 webp3/"
+
+build-image:
+    stage: "build"
+    needs:
+      - "lint"
+    image: "docker:20.10.16"
+    services:
+      - "docker:20.10.16-dind"
+    script:
+      - "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+      - "docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -f Containerfile ."
+      - "docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+
+tag-image:
+    stage: "deploy"
+    needs:
+      - "build-image"
+    image: "docker:20.10.16"
+    services:
+      - "docker:20.10.16-dind"
+    script:
+      - "docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY"
+      - "docker pull $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA"
+      - "docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+      - "docker tag $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA $CI_REGISTRY_IMAGE:latest"
+      - "docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+      - "docker push $CI_REGISTRY_IMAGE:latest"
+    rules:
+      - if: "$CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/"
