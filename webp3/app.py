@@ -33,7 +33,10 @@ bapp = Bottle()
 def build_absolute_url(req, name: str) -> str:
 	path = str(req.path)
 	if conf.BASE_URL:
-		return "/".join((conf.BASE_URL.rstrip("/"), req.tree, path, urlquote(name)))
+		urlparts = [conf.BASE_URL.rstrip("/"), req.tree, path, urlquote(name)]
+		if conf.SINGLE_ROOT:
+			del urlparts[1]
+		return "/".join(urlparts)
 	else:
 		return urljoin(request.url, urlquote(name))
 
