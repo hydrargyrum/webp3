@@ -40,4 +40,4 @@ tag-image:
       - "docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
       - "docker push $CI_REGISTRY_IMAGE:latest"
     rules:
-      - if: "$CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/"
+      - if: '$CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/'
