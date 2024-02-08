@@ -26,7 +26,7 @@ function unquote(url) {
 }
 
 function isPlaying() {
-	return !$("#player").get(0).paused;
+	return !document.querySelector("#player").paused;
 }
 
 function pl_skip(i) {
@@ -50,14 +50,15 @@ function pl_prev() {
 
 function pl_enqueueDir() {
 	playlist = [];
-	$(".file.audio a").each(function() {
-		playlist.push(this.href);
-	});
+	for (let link of document.querySelectorAll(".file.audio a")) {
+		playlist.push(link.href);
+	}
 	playlist_index = 0;
 
-	$("#player").attr("src", playlist[playlist_index]);
-
-	load(playlist[playlist_index]);
+	if (playlist.length) {
+		document.querySelector("#player").src = playlist[playlist_index];
+		load(playlist[playlist_index]);
+	}
 }
 
 function pl_play() {
@@ -70,16 +71,16 @@ function load(url) {
 	name = name.substring(name.lastIndexOf('/') + 1);
 	name = name.substring(0, name.lastIndexOf('.'));
 
-	$("#song").text(name);
-	$("#player").attr("src", url);
+	document.querySelector("#song").innerText = name;
+	document.querySelector("#player").src = url;
 }
 
 function play() {
-	$("#player").get(0).play();
+	document.querySelector("#player").play();
 }
 
 function pause() {
-	$("#player").get(0).pause();
+	document.querySelector("#player").pause();
 }
 
 function playPause() {
@@ -91,14 +92,15 @@ function playPause() {
 
 /* Tweak audio file links to play instead of changing document.location */
 function modFilesPlay() {
-	$(".file.audio a").each(function() {
-		$(this).click(function() {
-			$("#player").attr("src", this.href);
+	for (let link of document.querySelectorAll(".file.audio a")) {
+		link.addEventListener("click", function(event) {
+			document.querySelector("#player").src = event.target.href;
 			// + "?convert=ogg");
 			play();
+			event.preventDefault();
 			return false;
 		});
-	});
+	}
 }
 
 function getPath() {
@@ -121,7 +123,7 @@ function updateCrumbs() {
 		var p = crumbs.slice(0, i + 1).join('/');
 		parts.push('<span class="parent"><a href="' + p + '/">' + crumbs[i] + '</a></span>/');
 	}
-	$('.title').html(parts.join(''));
+	document.querySelector('.title').innerHTML = parts.join('');
 }
 
 /* Tweak directory links to reload the listing instead of changing document.location.
@@ -130,29 +132,44 @@ function updateCrumbs() {
  */
 function modDirsAjax() {
 	var modDirs = function() {
-		$(".dir a, .parent a").each(function() {
-			$(this).click(function() {
+		for (let link of document.querySelectorAll(".dir a, .parent a")) {
+			link.addEventListener("click", function(event) {
 				loadListing(this.href, true);
+				event.preventDefault();
 				return false;
 			});
-		});
+		}
 	};
 
 	var loadListing = function(url, push) {
-		$.get(url, function(){}, "html").done(function(data) {
-			$("#listing").replaceWith($(data).filter("#listing"));
-			if (push)
+		fetch(url).then(function(response) {
+			if (!response.ok) {
+				return;
+			}
+			return response.text();
+		}).then(function(text) {
+			if (!text) {
+				return;
+			}
+			var parser = new DOMParser();
+			var newdoc = parser.parseFromString(text, "text/html");
+			var newlisting = newdoc.getElementById("listing").cloneNode(true);
+			var listing = document.querySelector("#listing");
+			listing.parentNode.replaceChild(newlisting, listing);
+			if (push) {
 				history.pushState(null, null, url);
+			}
 			updateTitle();
 			modFilesPlay();
 			modDirs();
 			loadCover();
-			if (!isPlaying())
+			if (!isPlaying()) {
 				pl_enqueueDir();
+			}
 		});
 	};
 
-	$(window).on("popstate", function() {
+	window.addEventListener("popstate", function() {
 		loadListing(document.location, false);
 	});
 
@@ -160,20 +177,23 @@ function modDirsAjax() {
 }
 
 function loadCover() {
-	var $image = $('.file a').filter(function() {
-		return /([Ff]older|[Aa]lbum|[Ff]ront|[Ss]mall).*(jpg|jpeg|png)/.exec(this.href);
+	var images = Array.from(document.querySelectorAll('.file a')).filter(function(link) {
+		return /([Ff]older|[Aa]lbum|[Ff]ront|[Ss]mall).*(jpg|jpeg|png)/.exec(link.href);
 	});
-	if (!$image.length)
-		$image = $('.file a[href$="jpg"]');
+	if (!images.length) {
+		images = Array.from(document.querySelectorAll('.file a[href$="jpg"]'));
+	}
 
-	if ($image.length) {
-		$("#albumCover").attr("src", $image.get(0).href).show();
-	} else
-		$("#albumCover").hide();
+	if (images.length) {
+		document.querySelector("#albumCover").src = images[0].href;
+		document.querySelector("#albumCover").style.display = "inline";
+	} else {
+		document.querySelector("#albumCover").style.display = "none";
+	}
 }
 
 function updateSeekbar() {
-	var player = $("#player").get(0);
+	var player = document.querySelector("#player");
 	if (!player.duration)
 		return;
 
@@ -181,16 +201,16 @@ function updateSeekbar() {
 	var pos = Math.min(Math.floor(player.currentTime * total / player.duration), total - 1);
 	var left = (new Array(pos + 1)).join('+');
 	var right = (new Array(total - pos)).join('-');
-	$("#seekbar").text('|' + left + '+' + right + '|');
+	document.querySelector("#seekbar").innerText = '|' + left + '+' + right + '|';
 }
 
 function doSeek(event) {
-	var seeking = $(event.target).data("seeking");
+	var seeking = event.target.data_seeking;
 
 	if (!seeking)
 		return;
 
-	var player = $("#player").get(0);
+	var player = document.querySelector("#player");
 	var ratio = event.offsetX / event.target.offsetWidth;
 	var newTime = ratio * player.duration;
 
@@ -215,54 +235,54 @@ function blinkStop($s) {
 }
 
 function progressPlay() {
-	var pos = $("#player").get(0).currentTime;
+	var pos = document.querySelector("#player").currentTime;
 	if (useRemainingTime)
-		pos -= $("#player").get(0).duration;
+		pos -= document.querySelector("#player").duration;
 
-	$("#timeText").text(duration2str(pos));
+	document.querySelector("#timeText").innerText = duration2str(pos);
 	updateSeekbar();
 }
 
-$(document).ready(function() {
-	$tm = $("#timeText");
+window.addEventListener("load", function() {
+	$tm = document.querySelector("#timeText");
 
-	$("#player").on("playing", function() {
+	document.querySelector("#player").addEventListener("playing", function() {
 		//$("#toolPP").html("&#x23F8;");
-		$("#toolPP").text("||");
+		document.querySelector("#toolPP").innerText = "||";
 		//blinkStop($tm);
 	});
 
-	$("#player").on("pause", function() {
+	document.querySelector("#player").addEventListener("pause", function() {
 		//$("#toolPP").html("&#x23F5;");
-		$("#toolPP").text(">");
+		document.querySelector("#toolPP").innerText = ">";
 		//blinkStart($tm);
 	});
 
-	$("#player").on("durationchange", updateSeekbar);
-	$("#player").on("timeupdate", progressPlay);
-	$("#player").on("ended", function() {
+	document.querySelector("#player").addEventListener("durationchange", updateSeekbar);
+	document.querySelector("#player").addEventListener("timeupdate", progressPlay);
+	document.querySelector("#player").addEventListener("ended", function() {
 		pl_next();
 		if (playlist_index != 0)
 			pl_play();
 	});
 
-	$("#toolPrev").text("|<<");
-	$("#toolNext").text(">>|");
-	$("#toolPP").text(">");
+	document.querySelector("#toolPrev").innerText = "|<<";
+	document.querySelector("#toolNext").innerText =">>|";
+	document.querySelector("#toolPP").innerText = ">";
 
-	$("#seekbar").on("mousedown", function(ev) {
-		$(ev.target).data("seeking", true);
+	document.querySelector("#seekbar").addEventListener("mousedown", function(ev) {
+		ev.target.data_seeking = true;
 		doSeek(ev);
 	});
-	$("#seekbar").on("mousemove", doSeek);
-	$("#seekbar").on("mouseout", function(ev) {
-		$(ev.target).data("seeking", false);
+	document.querySelector("#seekbar").addEventListener("mousemove", doSeek);
+	document.querySelector("#seekbar").addEventListener("mouseout", function(ev) {
+		ev.target.data_seeking = false;
 	});
-	$("#seekbar").on("mouseup", function(ev) {
-		$(ev.target).data("seeking", false);
+	document.querySelector("#seekbar").addEventListener("mouseup", function(ev) {
+		ev.target.data_seeking = false;
 	});
 
-	$(window).on("keypress", function(e) {
+	window.addEventListener("keypress", function(e) {
 		switch (e.key) {
 		case "p":
 			playPause();
@@ -277,8 +297,8 @@ $(document).ready(function() {
 	});
 });
 
-$(document).ready(modFilesPlay);
-$(document).ready(modDirsAjax);
-$(document).ready(loadCover);
-$(document).ready(updateTitle);
-$(document).ready(pl_enqueueDir);
+window.addEventListener("load", modFilesPlay);
+window.addEventListener("load", modDirsAjax);
+window.addEventListener("load", loadCover);
+window.addEventListener("load", updateTitle);
+window.addEventListener("load", pl_enqueueDir);
