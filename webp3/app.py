@@ -113,6 +113,12 @@ def ls_root():
 	return slice_partial(body)
 
 
+@bapp.route("/status")
+def get_status():
+	response.headers['Content-Type'] = "application/json"
+	return '{"status": "ok"}'
+
+
 @bapp.route('/favicon.png')
 def _static_favicon():
 	return get_static('favicon.png')
