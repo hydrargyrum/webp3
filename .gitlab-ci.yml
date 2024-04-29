@@ -1,6 +1,8 @@
 variables:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
     PYTHONDEVMODE: "1"
+    RUNNER_GENERATE_ARTIFACTS_METADATA: "true"
+    SLSA_PROVENANCE_SCHEMA_VERSION: "v1"
 
 cache:
     paths:
