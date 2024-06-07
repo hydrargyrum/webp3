@@ -1,5 +1,5 @@
 #listing {
-	padding-left: 1ex;
+	padding: 1ex;
 	border: 1px dashed;
 	list-style-position: inside;
 }
@@ -15,6 +15,15 @@ a {
 
 #listing a:visited {
 	color: #666;
+}
+
+.title {
+	color: #999;
+}
+
+.title .parent {
+	padding-left: .2em;
+	padding-right: .2em;
 }
 
 .parent {
