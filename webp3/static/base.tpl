@@ -17,7 +17,7 @@
 <body>
 <div id="oldToolbar"><audio id="player" preload="true" controls="controls"></audio></div>
 
-<div id="toolbar"><a id="toolPrev" href="javascript:pl_prev()">&#x23EE;</a><a id="toolPP" href="javascript:playPause()">&#x23F5;</a><a id="toolNext" href="javascript:pl_next()">&#x23ED;</a><span id="song"></span><div id="time"><span id="timeText">--:--</span></div><div id="seekbar"> </div>
+<div id="toolbar"><a id="toolPrev" href="javascript:pl_prev()">|&lt;&lt;</a><a id="toolPP" href="javascript:playPause()">&gt;</a><a id="toolNext" href="javascript:pl_next()">&gt;&gt;|</a><span id="song"></span><div id="time"><span id="timeText">--:--</span></div><div id="seekbar"> </div>
 </div>
 
 <h4 class="title">${relpath}</h4>

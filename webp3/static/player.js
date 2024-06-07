@@ -247,13 +247,11 @@ window.addEventListener("load", function() {
 	$tm = document.querySelector("#timeText");
 
 	document.querySelector("#player").addEventListener("playing", function() {
-		//$("#toolPP").html("&#x23F8;");
 		document.querySelector("#toolPP").innerText = "||";
 		//blinkStop($tm);
 	});
 
 	document.querySelector("#player").addEventListener("pause", function() {
-		//$("#toolPP").html("&#x23F5;");
 		document.querySelector("#toolPP").innerText = ">";
 		//blinkStart($tm);
 	});
@@ -265,10 +263,6 @@ window.addEventListener("load", function() {
 		if (playlist_index != 0)
 			pl_play();
 	});
-
-	document.querySelector("#toolPrev").innerText = "|<<";
-	document.querySelector("#toolNext").innerText =">>|";
-	document.querySelector("#toolPP").innerText = ">";
 
 	document.querySelector("#seekbar").addEventListener("mousedown", function(ev) {
 		ev.target.data_seeking = true;
