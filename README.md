@@ -20,7 +20,7 @@ It is designed to serve trees where a folder is an album (or contains other fold
 
 ### Audio format support
 
-WebP3 doesn't use Flash and solely relies on HTML5's `<audio>` tag. So, audio file format support (like MP3) depends on your viewing browser and OS.
+WebP3 solely relies on HTML5's `<audio>` tag. So, audio file format support (like MP3) depends on your viewing browser and OS.
 
 ### JSON
 
