@@ -15,7 +15,7 @@ COPY README.md /src/
 USER webp3
 WORKDIR /home/webp3
 
-RUN python3 -m pip install /src
+RUN python3 -m pip install --user --no-warn-script-location /src
 
 CMD python3 -m webp3 --single-root media=/media
 
@@ -30,6 +30,6 @@ LABEL org.opencontainers.image.source="https://gitlab.com/hydrargyrum/webp3"
 LABEL org.opencontainers.image.licenses="WTFPL"
 LABEL org.opencontainers.image.base.name="docker.io/python:3-slim"
 
-RUN python3 -m pip install gunicorn
+RUN python3 -m pip install --user --no-warn-script-location gunicorn
 
 CMD WEBP3_SINGLE_ROOT=/media python3 -m gunicorn --bind=0.0.0.0:8000 --access-logfile=- --name=webp3 webp3.main_wsgi
