@@ -1,4 +1,10 @@
-FROM python:3-slim AS wsgiref
+FROM docker.io/python:3-slim AS wsgiref
+
+LABEL org.opencontainers.image.title="WebP3"
+LABEL org.opencontainers.image.description="web app to stream your audio files remotely"
+LABEL org.opencontainers.image.source="https://gitlab.com/hydrargyrum/webp3"
+LABEL org.opencontainers.image.licenses="WTFPL"
+LABEL org.opencontainers.image.base.name="docker.io/python:3-slim"
 
 RUN useradd --create-home webp3
 
@@ -17,6 +23,12 @@ EXPOSE 8000
 VOLUME /media
 
 FROM wsgiref AS gunicorn
+
+LABEL org.opencontainers.image.title="WebP3"
+LABEL org.opencontainers.image.description="web app to stream your audio files remotely"
+LABEL org.opencontainers.image.source="https://gitlab.com/hydrargyrum/webp3"
+LABEL org.opencontainers.image.licenses="WTFPL"
+LABEL org.opencontainers.image.base.name="docker.io/python:3-slim"
 
 RUN python3 -m pip install gunicorn
 
