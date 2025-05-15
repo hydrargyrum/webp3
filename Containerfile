@@ -17,7 +17,7 @@ WORKDIR /home/webp3
 
 RUN python3 -m pip install --user --no-warn-script-location /src
 
-CMD python3 -m webp3 --single-root media=/media
+CMD ["python3", "-m", "webp3", "--single-root", "media=/media"]
 
 EXPOSE 8000
 VOLUME /media
@@ -32,4 +32,4 @@ LABEL org.opencontainers.image.base.name="docker.io/python:3-slim"
 
 RUN python3 -m pip install --user --no-warn-script-location gunicorn
 
-CMD WEBP3_SINGLE_ROOT=/media python3 -m gunicorn --bind=0.0.0.0:8000 --access-logfile=- --name=webp3 webp3.main_wsgi
+CMD ["env", "WEBP3_SINGLE_ROOT=/media", "python3", "-m", "gunicorn", "--bind=0.0.0.0:8000", "--access-logfile=-", "--name=webp3", "webp3.main_wsgi"]
