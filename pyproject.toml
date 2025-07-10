@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [project.scripts]
-webp3 = "webp3:main"
+webp3 = "webp3.__main__:main"
 
 [project.urls]
 Homepage = "https://gitlab.com/hydrargyrum/webp3"
