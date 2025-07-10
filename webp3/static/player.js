@@ -4,20 +4,13 @@ var useRemainingTime = false;
 var playlist = [];
 var playlist_index = 0;
 
-/* pad(7, 3) == "007" */
-function pad(n, width, z) {
-	z = z || '0';
-	n = n + '';
-	return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-}
-
 /* duration2str(90) == "01:30" */
 function duration2str(t) {
 	var pt = Math.abs(t);
-	var s = pad(parseInt(pt / 60), 2) + ":" + pad(parseInt(pt % 60), 2);
+	var s = `${parseInt(pt / 60)}`.padStart(2, "0") + ":" + `${parseInt(pt % 60)}`.padStart(2, "0");
 
 	if (t < 0)
-		return "-" + s;
+		return `-${s}`;
 	return s;
 }
 
@@ -110,7 +103,7 @@ function getPath() {
 
 function updateTitle() {
 	var title = getPath();
-	document.title = title + " - WebP3";
+	document.title = `${title} - WebP3`;
 	updateCrumbs();
 }
 
@@ -121,7 +114,7 @@ function updateCrumbs() {
 	parts.push('<span class="parent"><a href="/">/</a></span>');
 	for (var i = 1; i < crumbs.length - 1; i++) {
 		var p = crumbs.slice(0, i + 1).join('/');
-		parts.push('<span class="parent"><a href="' + p + '/">' + crumbs[i] + '</a></span>/');
+		parts.push(`<span class="parent"><a href="${p}/">${crumbs[i]}</a></span>/`);
 	}
 	document.querySelector('.title').innerHTML = parts.join('');
 }
@@ -199,9 +192,7 @@ function updateSeekbar() {
 
 	var total = 10;
 	var pos = Math.min(Math.floor(player.currentTime * total / player.duration), total - 1);
-	var left = (new Array(pos + 1)).join('+');
-	var right = (new Array(total - pos)).join('-');
-	document.querySelector("#seekbar").innerText = '|' + left + '+' + right + '|';
+	document.querySelector("#seekbar").innerText = "|" + "+".repeat(pos + 1) + "-".repeat(total - pos - 1) + "|";
 }
 
 function doSeek(event) {
@@ -244,7 +235,7 @@ function progressPlay() {
 }
 
 window.addEventListener("load", function() {
-	$tm = document.querySelector("#timeText");
+	let $tm = document.querySelector("#timeText");
 
 	document.querySelector("#player").addEventListener("playing", function() {
 		document.querySelector("#toolPP").innerText = "||";
