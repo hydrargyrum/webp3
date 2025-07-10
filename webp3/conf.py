@@ -18,7 +18,6 @@ AUDIO_EXTENSIONS = {
 }
 
 WEBPATH = os.path.join(os.path.dirname(__file__), 'static')
-
-TEMPLATE = os.path.join(WEBPATH, 'base.tpl')
+TEMPLATE = "base.tpl"
 
 BASE_URL = None

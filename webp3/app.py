@@ -70,6 +70,7 @@ def ls_dir(req: Request):
 		response.headers['Content-Type'] = 'text/html'
 		body = mako_template(
 			conf.TEMPLATE,
+			template_lookup=[conf.WEBPATH],
 			items=items,
 			files=files,
 			relpath=Path('/').joinpath(req.path),
@@ -104,6 +105,7 @@ def ls_root():
 		response.headers['Content-Type'] = 'text/html'
 		body = mako_template(
 			conf.TEMPLATE,
+			template_lookup=[conf.WEBPATH],
 			items=items,
 			files=[],
 			relpath=Path('/'),
